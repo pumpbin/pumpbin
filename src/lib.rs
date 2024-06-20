@@ -631,9 +631,11 @@ impl Application for Pumpbin {
                 let mut platforms = Vec::default();
                 if plugin.platforms().windows().is_some() {
                     platforms.push(Platform::Windows);
-                } else if plugin.platforms().linux().is_some() {
+                }
+                if plugin.platforms().linux().is_some() {
                     platforms.push(Platform::Linux);
-                } else if plugin.platforms().darwin().is_some() {
+                }
+                if plugin.platforms().darwin().is_some() {
                     platforms.push(Platform::Darwin);
                 }
 
