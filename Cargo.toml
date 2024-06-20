@@ -1,0 +1,26 @@
+[package]
+name = "pumpbin"
+version = "0.1.0"
+edition = "2021"
+authors = ["b1n <b1n@b1n.io>"]
+license = "MIT"
+homepage = "https://b1n.io"
+repository = "https://github.com/pumpbin/pumpbin"
+
+[dependencies]
+rfd = { version = "0.14.1", default-features = false , features = ["tokio"]}
+dirs = "5.0.1"
+flatbuffers = "24.3.25"
+open = "5.1.4"
+bincode = { version = "2.0.0-rc.3", default-features = false , features = ["alloc", "derive", "std"]}
+anyhow = "1.0.86"
+rand = "0.8.5"
+memchr = "2.7.4"
+aes-gcm = "0.10.3"
+
+[dependencies.iced]
+version = "0.13.0-dev"
+git = "https://github.com/iced-rs/iced"
+rev = "6c1027af8d54ad21e282337b53097eb196d62c00"
+default-features = false
+features = ["advanced", "svg", "tokio", "wgpu"]

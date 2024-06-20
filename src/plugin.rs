@@ -1,0 +1,207 @@
+use std::{collections::HashMap, fmt::Display, fs, ops::Not, path::Path};
+
+use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
+use anyhow::anyhow;
+use bincode::{decode_from_reader, decode_from_slice, encode_to_vec, Decode, Encode};
+use dirs::data_dir;
+
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
+pub struct AesGcmPass {
+    key_holder: Vec<u8>,
+    nonce_holder: Vec<u8>,
+}
+
+impl AesGcmPass {
+    pub fn key_holder(&self) -> &[u8] {
+        &self.key_holder
+    }
+
+    pub fn key_holder_mut(&mut self) -> &mut Vec<u8> {
+        &mut self.key_holder
+    }
+
+    pub fn nonce_holder(&self) -> &[u8] {
+        &self.nonce_holder
+    }
+
+    pub fn nonce_holder_mut(&mut self) -> &mut Vec<u8> {
+        &mut self.nonce_holder
+    }
+}
+
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
+pub enum EncryptType {
+    None,
+    Xor(Vec<u8>),
+    AesGcm(AesGcmPass),
+}
+
+impl Display for EncryptType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EncryptType::None => write!(f, "None"),
+            EncryptType::Xor(_) => write!(f, "Xor"),
+            EncryptType::AesGcm(_) => write!(f, "AesGcm"),
+        }
+    }
+}
+
+impl EncryptType {
+    pub fn encrypt(&self, path: &Path) -> anyhow::Result<Vec<u8>> {
+        let data = fs::read(path)?;
+
+        match self {
+            EncryptType::None => Ok(data),
+            EncryptType::Xor(x) => Ok(data
+                .iter()
+                .enumerate()
+                .map(|(i, byte)| byte ^ x[i % x.len()])
+                .collect()),
+            EncryptType::AesGcm(x) => {
+                let key = aes_gcm::Key::<Aes256Gcm>::from_slice(x.key_holder());
+                let aes = Aes256Gcm::new(key);
+                let nonce = Nonce::from_slice(x.nonce_holder());
+                aes.encrypt(nonce, data.as_slice())
+                    .map_err(|e| anyhow!(e.to_string()))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
+pub struct Bins {
+    executable: Option<Vec<u8>>,
+    dynamic_library: Option<Vec<u8>>,
+}
+
+impl Bins {
+    pub fn executable(&self) -> Option<&Vec<u8>> {
+        self.executable.as_ref()
+    }
+
+    pub fn dynamic_library(&self) -> Option<&Vec<u8>> {
+        self.dynamic_library.as_ref()
+    }
+}
+
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
+pub struct Platforms {
+    windows: Option<Bins>,
+    linux: Option<Bins>,
+    darwin: Option<Bins>,
+}
+
+impl Platforms {
+    pub fn windows(&self) -> Option<&Bins> {
+        self.windows.as_ref()
+    }
+
+    pub fn linux(&self) -> Option<&Bins> {
+        self.linux.as_ref()
+    }
+
+    pub fn darwin(&self) -> Option<&Bins> {
+        self.darwin.as_ref()
+    }
+}
+
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
+pub struct Plugin {
+    plugin_name: String,
+    author: Option<String>,
+    version: Option<String>,
+    desc: Option<String>,
+    prefix: Vec<u8>,
+    size_holder: Option<Vec<u8>>,
+    max_len: usize,
+    encrypt_type: EncryptType,
+    platforms: Platforms,
+}
+
+impl Plugin {
+    pub fn plugin_name(&self) -> &str {
+        &self.plugin_name
+    }
+
+    pub fn author(&self) -> Option<&String> {
+        self.author.as_ref()
+    }
+
+    pub fn version(&self) -> Option<&String> {
+        self.version.as_ref()
+    }
+
+    pub fn desc(&self) -> Option<&String> {
+        self.desc.as_ref()
+    }
+
+    pub fn prefix(&self) -> &[u8] {
+        &self.prefix
+    }
+
+    pub fn size_holder(&self) -> Option<&Vec<u8>> {
+        self.size_holder.as_ref()
+    }
+
+    pub fn max_len(&self) -> usize {
+        self.max_len
+    }
+
+    pub fn encrypt_type(&self) -> &EncryptType {
+        &self.encrypt_type
+    }
+
+    pub fn platforms(&self) -> &Platforms {
+        &self.platforms
+    }
+}
+
+impl Plugin {
+    pub fn reade_plugin(path: &Path) -> anyhow::Result<Plugin> {
+        let config = bincode::config::standard();
+
+        let file = fs::File::open(path)?;
+        let reader = std::io::BufReader::new(file);
+        let decoded_plugin = decode_from_reader(reader, config)?;
+        Ok(decoded_plugin)
+    }
+}
+
+#[derive(Debug, Clone, Default, Encode, Decode, PartialEq, Eq)]
+pub struct Plugins(pub HashMap<String, Plugin>);
+
+impl Plugins {
+    pub fn reade_plugins() -> anyhow::Result<Plugins> {
+        let config = bincode::config::standard();
+
+        let mut plugins_path = data_dir().ok_or(anyhow::anyhow!("data_dir is none."))?;
+        plugins_path.push("pumpbin");
+        plugins_path.push("plugins");
+
+        if plugins_path.exists() && plugins_path.is_file() {
+            let plugins = fs::read(plugins_path)?;
+            let (decoded_plugins, _) = decode_from_slice(plugins.as_slice(), config)?;
+            Ok(decoded_plugins)
+        } else {
+            anyhow::bail!("file not exists.")
+        }
+    }
+
+    pub fn uptade_plugins(&self) -> anyhow::Result<()> {
+        let config = bincode::config::standard();
+        let buf = encode_to_vec(&self.0, config)?;
+
+        let mut plugins_path = data_dir().ok_or(anyhow::anyhow!("data_dir is none."))?;
+        plugins_path.push("pumpbin");
+        if plugins_path.exists().not() {
+            fs::create_dir_all(&plugins_path)?;
+        } else if plugins_path.exists() && plugins_path.is_dir().not() {
+            fs::remove_file(&plugins_path)?;
+            fs::create_dir_all(&plugins_path)?;
+        }
+        plugins_path.push("plugins");
+        fs::write(plugins_path, buf)?;
+
+        Ok(())
+    }
+}
