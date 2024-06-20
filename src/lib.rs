@@ -1129,9 +1129,6 @@ impl Application for Pumpbin {
         .align_items(Alignment::Center)
         .into();
 
-        #[cfg(debug_assertions)]
-        let home = home.explain(iced::Color::BLACK);
-
         home
     }
 
