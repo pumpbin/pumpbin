@@ -2,13 +2,18 @@
 name = "pumpbin"
 version = "0.1.0"
 edition = "2021"
+default-run = "pumpbin"
 authors = ["b1n <b1n@b1n.io>"]
 license = "MIT"
 homepage = "https://b1n.io"
 repository = "https://github.com/pumpbin/pumpbin"
 
+[[bin]]
+name = "maker"
+path = "src/bin/maker.rs"
+
 [dependencies]
-rfd = { version = "0.14.1", default-features = false , features = ["tokio"]}
+rfd = { version = "0.14.1", default-features = false}
 dirs = "5.0.1"
 flatbuffers = "24.3.25"
 open = "5.1.4"

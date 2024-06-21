@@ -47,6 +47,16 @@ impl Display for EncryptType {
 }
 
 impl EncryptType {
+    pub const fn all() -> [EncryptType; 3] {
+        [
+            EncryptType::None,
+            EncryptType::Xor(vec![]),
+            EncryptType::AesGcm(AesGcmPass {
+                key_holder: vec![],
+                nonce_holder: vec![],
+            }),
+        ]
+    }
     pub fn encrypt(&self, path: &Path) -> anyhow::Result<Vec<u8>> {
         let data = fs::read(path)?;
 
@@ -70,8 +80,8 @@ impl EncryptType {
 
 #[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct Bins {
-    executable: Option<Vec<u8>>,
-    dynamic_library: Option<Vec<u8>>,
+    pub executable: Option<Vec<u8>>,
+    pub dynamic_library: Option<Vec<u8>>,
 }
 
 impl Bins {
@@ -86,9 +96,9 @@ impl Bins {
 
 #[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct Platforms {
-    windows: Option<Bins>,
-    linux: Option<Bins>,
-    darwin: Option<Bins>,
+    pub windows: Option<Bins>,
+    pub linux: Option<Bins>,
+    pub darwin: Option<Bins>,
 }
 
 impl Platforms {
@@ -107,15 +117,15 @@ impl Platforms {
 
 #[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct Plugin {
-    plugin_name: String,
-    author: Option<String>,
-    version: Option<String>,
-    desc: Option<String>,
-    prefix: Vec<u8>,
-    size_holder: Option<Vec<u8>>,
-    max_len: usize,
-    encrypt_type: EncryptType,
-    platforms: Platforms,
+    pub plugin_name: String,
+    pub author: Option<String>,
+    pub version: Option<String>,
+    pub desc: Option<String>,
+    pub prefix: Vec<u8>,
+    pub size_holder: Option<Vec<u8>>,
+    pub max_len: usize,
+    pub encrypt_type: EncryptType,
+    pub platforms: Platforms,
 }
 
 impl Plugin {

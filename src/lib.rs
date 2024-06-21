@@ -1,6 +1,6 @@
 mod button_style;
-mod plugin;
-mod svg_style;
+pub mod plugin;
+pub mod svg_style;
 
 use std::{fmt::Display, fs, iter, ops::Not, path::PathBuf};
 
@@ -8,12 +8,14 @@ use dirs::{desktop_dir, home_dir};
 use iced::{
     advanced::Application,
     executor,
+    font::{Family, Stretch, Style, Weight},
     widget::{
         button, column, container, horizontal_rule, pick_list, row, scrollable,
         svg::{self, Handle},
         text, text_editor, text_input, vertical_rule, Scrollable, Svg,
     },
-    Alignment, Background, Element, Font, Length, Renderer, Task, Theme,
+    window::{self, Level, Position},
+    Alignment, Background, Element, Font, Length, Pixels, Renderer, Settings, Size, Task, Theme,
 };
 use memchr::memmem;
 use plugin::{EncryptType, Plugin, Plugins};
@@ -60,6 +62,36 @@ impl Default for Pumpbin {
 }
 
 impl Pumpbin {
+    pub fn settings() -> Settings {
+        let size = Size::new(1000.0, 600.0);
+
+        Settings {
+            id: Some(env!("CARGO_PKG_NAME").into()),
+            window: window::Settings {
+                size,
+                position: Position::Centered,
+                min_size: Some(size),
+                visible: true,
+                resizable: true,
+                decorations: true,
+                transparent: false,
+                level: Level::Normal,
+                exit_on_close_request: true,
+                ..Default::default()
+            },
+            fonts: vec![include_bytes!("../assets/JetBrainsMonoNerdFontPropo-Regular.ttf").into()],
+            default_font: Font {
+                family: Family::Name("JetBrainsMono Nerd Font"),
+                weight: Weight::Normal,
+                stretch: Stretch::Normal,
+                style: Style::Normal,
+            },
+            default_text_size: Pixels(13.0),
+            antialiasing: true,
+            ..Default::default()
+        }
+    }
+
     fn show_message(&mut self, message: String) {
         self.message = message;
     }
@@ -159,8 +191,8 @@ pub enum ShellcodeSaveType {
 impl Display for ShellcodeSaveType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ShellcodeSaveType::Local => write!(f, "Shellcode path:"),
-            ShellcodeSaveType::Remote => write!(f, "Shellcode url:"),
+            ShellcodeSaveType::Local => write!(f, "Local"),
+            ShellcodeSaveType::Remote => write!(f, "Remote"),
         }
     }
 }
@@ -694,15 +726,21 @@ impl Application for Pumpbin {
         let font = Font::with_name("JetBrainsMono Nerd Font");
 
         let shellcode_src = row![
-            text_input(&self.shellcode_save_type.to_string(), &self.shellcode_src)
-                .on_input(Message::ShellcodeSrcChanged)
-                .icon(text_input::Icon {
-                    font,
-                    code_point: '󱓞',
-                    size: None,
-                    spacing: 12.0,
-                    side: text_input::Side::Left,
-                }),
+            text_input(
+                match self.shellcode_save_type() {
+                    ShellcodeSaveType::Local => "Shellcode path:",
+                    ShellcodeSaveType::Remote => "Shellcode url:",
+                },
+                &self.shellcode_src
+            )
+            .on_input(Message::ShellcodeSrcChanged)
+            .icon(text_input::Icon {
+                font,
+                code_point: '󱓞',
+                size: None,
+                spacing: 12.0,
+                side: text_input::Side::Left,
+            }),
             button(match self.shellcode_save_type() {
                 ShellcodeSaveType::Local => row![Svg::new(Handle::from_memory(include_bytes!(
                     "../assets/svg/three-dots.svg"
