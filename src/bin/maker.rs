@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, usize};
+use std::{fs, path::PathBuf, time::Duration, usize};
 
 use dirs::{desktop_dir, home_dir};
 use iced::{
@@ -66,6 +66,14 @@ impl Default for Maker {
 }
 
 impl Maker {
+    fn show_message(&mut self, message: String) -> Task<MakerMessage> {
+        self.message = message;
+        let wait = async {
+            tokio::time::sleep(Duration::from_secs(3)).await;
+        };
+        Task::perform(wait, MakerMessage::ClearMessage)
+    }
+
     fn plugin_name(&self) -> &str {
         &self.plugin_name
     }
@@ -181,6 +189,7 @@ enum MakerMessage {
     B1nClicked,
     GithubClicked,
     ThemeChanged(Theme),
+    ClearMessage(()),
 }
 
 impl Application for Maker {
@@ -281,19 +290,16 @@ impl Application for Maker {
             }
             MakerMessage::GenerateClicked => {
                 if self.plugin_name().is_empty() {
-                    self.message = "Plugin Name is empty.".to_string();
-                    return Task::none();
+                    return self.show_message("Plugin Name is empty.".to_string());
                 }
 
                 if self.prefix().is_empty() {
-                    self.message = "Prefix is empty.".to_string();
-                    return Task::none();
+                    return self.show_message("Prefix is empty.".to_string());
                 }
 
                 if let ShellcodeSaveType::Local = self.shellcode_save_type() {
                     if self.size_holder().is_empty() {
-                        self.message = "Size Holder is empty.".to_string();
-                        return Task::none();
+                        return self.show_message("Size Holder is empty.".to_string());
                     }
                 }
 
@@ -302,25 +308,21 @@ impl Application for Maker {
                 if let Ok(max) = self.max_len().parse::<usize>() {
                     max_len = max;
                 } else {
-                    self.message = "MaxLen numeric only.".to_string();
-                    return Task::none();
+                    return self.show_message("MaxLen numeric only.".to_string());
                 }
 
                 match self.encrypt_type() {
                     EncryptType::None => (),
                     EncryptType::Xor(x) => {
                         if x.is_empty() {
-                            self.message = "Xor Pass is empty.".to_string();
-                            return Task::none();
+                            return self.show_message("Xor Pass is empty.".to_string());
                         }
                     }
                     EncryptType::AesGcm(x) => {
                         if x.key_holder().is_empty() {
-                            self.message = "AesGcm Key is empty.".to_string();
-                            return Task::none();
+                            return self.show_message("AesGcm Key is empty.".to_string());
                         } else if x.nonce_holder().is_empty() {
-                            self.message = "AesGcm Nonce is empty.".to_string();
-                            return Task::none();
+                            return self.show_message("AesGcm Nonce is empty.".to_string());
                         }
                     }
                 }
@@ -436,14 +438,10 @@ impl Application for Maker {
 
                 Task::perform(make_plugin, MakerMessage::GenerateDone)
             }
-            MakerMessage::GenerateDone(x) => {
-                self.message = match x {
-                    Ok(_) => "Generate done.".to_string(),
-                    Err(e) => e,
-                };
-
-                Task::none()
-            }
+            MakerMessage::GenerateDone(x) => self.show_message(match x {
+                Ok(_) => "Generate done.".to_string(),
+                Err(e) => e,
+            }),
             MakerMessage::ChooseFileClicked(x) => {
                 let choose_file = async move {
                     AsyncFileDialog::new()
@@ -470,59 +468,63 @@ impl Application for Maker {
             MakerMessage::WindowsExeChooseDone(x) => {
                 match x {
                     Ok(x) => self.windows_exe = x,
-                    Err(x) => self.message = x,
+                    Err(x) => return self.show_message(x),
                 }
                 Task::none()
             }
             MakerMessage::WindowsLibChooseDone(x) => {
                 match x {
                     Ok(x) => self.windows_lib = x,
-                    Err(x) => self.message = x,
+                    Err(x) => return self.show_message(x),
                 }
                 Task::none()
             }
             MakerMessage::LinuxExeChooseDone(x) => {
                 match x {
                     Ok(x) => self.linux_exe = x,
-                    Err(x) => self.message = x,
+                    Err(x) => return self.show_message(x),
                 }
                 Task::none()
             }
             MakerMessage::LinuxLibChooseDone(x) => {
                 match x {
                     Ok(x) => self.linux_lib = x,
-                    Err(x) => self.message = x,
+                    Err(x) => return self.show_message(x),
                 }
                 Task::none()
             }
             MakerMessage::DarwinExeChooseDone(x) => {
                 match x {
                     Ok(x) => self.darwin_exe = x,
-                    Err(x) => self.message = x,
+                    Err(x) => return self.show_message(x),
                 }
                 Task::none()
             }
             MakerMessage::DarwinLibChooseDone(x) => {
                 match x {
                     Ok(x) => self.darwin_lib = x,
-                    Err(x) => self.message = x,
+                    Err(x) => return self.show_message(x),
                 }
                 Task::none()
             }
             MakerMessage::B1nClicked => {
                 if open::that(env!("CARGO_PKG_HOMEPAGE")).is_err() {
-                    self.message = "Open home failed.".into();
+                    return self.show_message("Open home failed.".into());
                 }
                 Task::none()
             }
             MakerMessage::GithubClicked => {
                 if open::that(env!("CARGO_PKG_REPOSITORY")).is_err() {
-                    self.message = "Open repo failed.".into();
+                    return self.show_message("Open repo failed.".into());
                 }
                 Task::none()
             }
             MakerMessage::ThemeChanged(x) => {
                 self.selected_theme = x;
+                Task::none()
+            }
+            MakerMessage::ClearMessage(_) => {
+                self.message = "Welcom to PumpBin Maker.".to_string();
                 Task::none()
             }
         }
@@ -757,7 +759,7 @@ impl Application for Maker {
                     .width(Length::FillPortion(1))
                     .align_items(Alignment::Start),
                 column![row![b1n, github].align_items(Alignment::Center)]
-                    .width(Length::FillPortion(1))
+                    .width(Length::Shrink)
                     .align_items(Alignment::Center),
                 column![theme_list]
                     .width(Length::FillPortion(1))

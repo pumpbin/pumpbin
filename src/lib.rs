@@ -2,7 +2,7 @@ mod button_style;
 pub mod plugin;
 pub mod svg_style;
 
-use std::{fmt::Display, fs, iter, ops::Not, path::PathBuf};
+use std::{fmt::Display, fs, iter, ops::Not, path::PathBuf, time::Duration};
 
 use dirs::{desktop_dir, home_dir};
 use iced::{
@@ -109,8 +109,12 @@ impl Pumpbin {
         }
     }
 
-    fn show_message(&mut self, message: String) {
+    fn show_message(&mut self, message: String) -> Task<Message> {
         self.message = message;
+        let wait = async {
+            tokio::time::sleep(Duration::from_secs(3)).await;
+        };
+        Task::perform(wait, Message::ClearMessage)
     }
 
     pub fn shellcode_src(&self) -> &str {
@@ -182,6 +186,7 @@ pub enum Message {
     B1nClicked,
     GithubClicked,
     ThemeChanged(Theme),
+    ClearMessage(()),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -274,7 +279,7 @@ impl Application for Pumpbin {
                 if let Some(path) = x {
                     self.shellcode_src = path.to_string_lossy().to_string();
                 } else {
-                    self.show_message("Canceled shellcode selection.".into())
+                    return self.show_message("Canceled shellcode selection.".into());
                 }
                 Task::none()
             }
@@ -355,28 +360,21 @@ impl Application for Pumpbin {
                     };
                     Task::perform(write_encrypted, Message::EncryptShellcodeDone)
                 } else {
-                    self.show_message("Canceled shellcode selection.".into());
-                    Task::none()
+                    self.show_message("Canceled shellcode selection.".into())
                 }
             }
-            Message::EncryptShellcodeDone(x) => {
-                self.show_message(match x {
-                    Ok(_) => "Saved encrypted shellcode.".into(),
-                    Err(e) => e,
-                });
-
-                Task::none()
-            }
+            Message::EncryptShellcodeDone(x) => self.show_message(match x {
+                Ok(_) => "Saved encrypted shellcode.".into(),
+                Err(e) => e,
+            }),
             Message::GenerateClicked => {
                 // verify path if local mode
                 let path = PathBuf::from(self.shellcode_src());
                 if self.shellcode_save_type() == ShellcodeSaveType::Local {
                     if path.exists().not() {
-                        self.show_message("Shellcode path not exists.".into());
-                        return Task::none();
+                        return self.show_message("Shellcode path not exists.".into());
                     } else if path.is_file().not() {
-                        self.show_message("Shellcode path is not a file.".into());
-                        return Task::none();
+                        return self.show_message("Shellcode path is not a file.".into());
                     }
                 }
 
@@ -546,14 +544,10 @@ impl Application for Pumpbin {
 
                 Task::perform(generate, Message::GenerateDone)
             }
-            Message::GenerateDone(x) => {
-                self.show_message(match x {
-                    Ok(_) => "Saved generated binary.".into(),
-                    Err(e) => e,
-                });
-
-                Task::none()
-            }
+            Message::GenerateDone(x) => self.show_message(match x {
+                Ok(_) => "Saved generated binary.".into(),
+                Err(e) => e,
+            }),
             Message::BinaryTypeChanged(x) => {
                 self.selected_binary_type = Some(x);
                 Task::none()
@@ -605,12 +599,10 @@ impl Application for Pumpbin {
                             self.update(Message::PluginItemClicked(selected_plugin));
                         }
                         self.plugins = plugins;
-                        self.show_message(format!("Added {} plugins, {} failed.", success, failed));
+                        self.show_message(format!("Added {} plugins, {} failed.", success, failed))
                     }
                     Err(e) => self.show_message(e),
                 }
-
-                Task::none()
             }
             Message::RemovePlugin(x) => {
                 let mut plugins = self.plugins().clone();
@@ -628,31 +620,28 @@ impl Application for Pumpbin {
                 };
                 Task::perform(remove_plugin, Message::RemovePluginDone)
             }
-            Message::RemovePluginDone(x) => {
-                match x {
-                    Ok((plugin_name, plugins)) => {
-                        self.plugins = plugins;
+            Message::RemovePluginDone(x) => match x {
+                Ok((plugin_name, plugins)) => {
+                    self.plugins = plugins;
 
-                        let mut names: Vec<String> =
-                            self.plugins().0.keys().map(|x| x.to_owned()).collect();
-                        names.sort();
+                    let mut names: Vec<String> =
+                        self.plugins().0.keys().map(|x| x.to_owned()).collect();
+                    names.sort();
 
-                        if let Some(name) = names.first() {
-                            _ = self.update(Message::PluginItemClicked(name.to_owned()));
-                        } else {
-                            self.supported_binary_types = Default::default();
-                            self.selected_binary_type = None;
-                            self.supported_platforms = Default::default();
-                            self.selected_platform = None;
-                            self.selected_plugin = None;
-                            self.shellcode_save_type = ShellcodeSaveType::Local;
-                        }
-                        self.show_message(format!("Removed plugin {}", plugin_name));
+                    if let Some(name) = names.first() {
+                        _ = self.update(Message::PluginItemClicked(name.to_owned()));
+                    } else {
+                        self.supported_binary_types = Default::default();
+                        self.selected_binary_type = None;
+                        self.supported_platforms = Default::default();
+                        self.selected_platform = None;
+                        self.selected_plugin = None;
+                        self.shellcode_save_type = ShellcodeSaveType::Local;
                     }
-                    Err(e) => self.show_message(e),
+                    self.show_message(format!("Removed plugin {}", plugin_name))
                 }
-                Task::none()
-            }
+                Err(e) => self.show_message(e),
+            },
             Message::PluginItemClicked(x) => {
                 // unwrap is safe.
                 // UI implemented strict restrictions.
@@ -662,9 +651,9 @@ impl Application for Pumpbin {
                     if plugin.plugin_name() == selected_plugin {
                         // random encryption pass
                         self.random_encrypt_pass();
-                        self.show_message("Generated new random encryption passwords.".to_string());
-
-                        return Task::none();
+                        return self.show_message(
+                            "Generated new random encryption passwords.".to_string(),
+                        );
                     }
                 }
 
@@ -711,18 +700,22 @@ impl Application for Pumpbin {
             }
             Message::B1nClicked => {
                 if open::that(env!("CARGO_PKG_HOMEPAGE")).is_err() {
-                    self.show_message("Open home failed.".into());
+                    return self.show_message("Open home failed.".into());
                 }
                 Task::none()
             }
             Message::GithubClicked => {
                 if open::that(env!("CARGO_PKG_REPOSITORY")).is_err() {
-                    self.show_message("Open repo failed.".into());
+                    return self.show_message("Open repo failed.".into());
                 }
                 Task::none()
             }
             Message::ThemeChanged(x) => {
                 self.selected_theme = x;
+                Task::none()
+            }
+            Message::ClearMessage(_) => {
+                self.message = "Welcome to PumpBin!".to_string();
                 Task::none()
             }
         }
@@ -1120,7 +1113,13 @@ impl Application for Pumpbin {
         .width(Length::Fill)
         .height(Length::Fill);
 
-        let message = row![text(" ").size(25), text(&self.message)].align_items(Alignment::Center);
+        let message = row![
+            text(" ")
+                .color(self.theme().extended_palette().primary.base.color)
+                .size(25),
+            text(&self.message).color(self.theme().extended_palette().primary.base.color)
+        ]
+        .align_items(Alignment::Center);
 
         let b1n = button(
             Svg::new(Handle::from_memory(include_bytes!(
