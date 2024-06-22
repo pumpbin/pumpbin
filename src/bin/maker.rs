@@ -1,6 +1,5 @@
 use std::{fs, path::PathBuf, usize};
 
-use bincode::encode_to_vec;
 use dirs::{desktop_dir, home_dir};
 use iced::{
     advanced::Application,
@@ -419,9 +418,6 @@ impl Application for Maker {
 
                 let plugin_name = self.plugin_name().to_owned();
                 let make_plugin = async move {
-                    let buf = encode_to_vec(plugin, bincode::config::standard())
-                        .map_err(|_| "Encode plugin failed.".to_string())?;
-
                     let file = AsyncFileDialog::new()
                         .set_directory(desktop_dir().unwrap_or(".".into()))
                         .set_file_name(format!("{}.b1n", plugin_name))
@@ -431,7 +427,9 @@ impl Application for Maker {
                         .await
                         .ok_or("Canceled plugin saving.".to_string())?;
 
-                    fs::write(file.path(), buf).map_err(|_| "Write plugin failed.".to_string())?;
+                    plugin
+                        .write_plugin(file.path())
+                        .map_err(|_| "Write plugin failed.".to_string())?;
 
                     Ok(())
                 };

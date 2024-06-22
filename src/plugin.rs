@@ -2,8 +2,17 @@ use std::{collections::HashMap, fmt::Display, fs, ops::Not, path::Path};
 
 use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
 use anyhow::anyhow;
-use bincode::{decode_from_reader, decode_from_slice, encode_to_vec, Decode, Encode};
+use bincode::{decode_from_slice, encode_to_vec, Decode, Encode};
 use dirs::data_dir;
+
+// 500 MiB
+const LIMIT: usize = 1024 * 1024 * 500;
+pub const BINCODE_PLUGIN_CONFIG: bincode::config::Configuration<
+    bincode::config::LittleEndian,
+    bincode::config::Varint,
+    bincode::config::Limit<LIMIT>,
+> = bincode::config::standard().with_limit();
+const BINCODE_PLUGINS_CONFIG: bincode::config::Configuration = bincode::config::standard();
 
 #[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct AesGcmPass {
@@ -168,12 +177,16 @@ impl Plugin {
 
 impl Plugin {
     pub fn reade_plugin(path: &Path) -> anyhow::Result<Plugin> {
-        let config = bincode::config::standard();
+        let buf = fs::read(path)?;
+        let (plugin, _) = decode_from_slice(buf.as_slice(), BINCODE_PLUGIN_CONFIG)?;
+        Ok(plugin)
+    }
 
-        let file = fs::File::open(path)?;
-        let reader = std::io::BufReader::new(file);
-        let decoded_plugin = decode_from_reader(reader, config)?;
-        Ok(decoded_plugin)
+    pub fn write_plugin(&self, path: &Path) -> anyhow::Result<()> {
+        let buf = encode_to_vec(self, BINCODE_PLUGIN_CONFIG)?;
+        fs::write(path, buf.as_slice())?;
+
+        Ok(())
     }
 }
 
@@ -182,24 +195,21 @@ pub struct Plugins(pub HashMap<String, Plugin>);
 
 impl Plugins {
     pub fn reade_plugins() -> anyhow::Result<Plugins> {
-        let config = bincode::config::standard();
-
         let mut plugins_path = data_dir().ok_or(anyhow::anyhow!("data_dir is none."))?;
         plugins_path.push("pumpbin");
         plugins_path.push("plugins");
 
         if plugins_path.exists() && plugins_path.is_file() {
-            let plugins = fs::read(plugins_path)?;
-            let (decoded_plugins, _) = decode_from_slice(plugins.as_slice(), config)?;
-            Ok(decoded_plugins)
+            let buf = fs::read(plugins_path)?;
+            let (plugins, _) = decode_from_slice(buf.as_slice(), BINCODE_PLUGINS_CONFIG)?;
+            Ok(plugins)
         } else {
             anyhow::bail!("file not exists.")
         }
     }
 
     pub fn uptade_plugins(&self) -> anyhow::Result<()> {
-        let config = bincode::config::standard();
-        let buf = encode_to_vec(&self.0, config)?;
+        let buf = encode_to_vec(self, BINCODE_PLUGINS_CONFIG)?;
 
         let mut plugins_path = data_dir().ok_or(anyhow::anyhow!("data_dir is none."))?;
         plugins_path.push("pumpbin");
