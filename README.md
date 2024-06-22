@@ -20,10 +20,11 @@ The second method is the reason for the creation of PumpBin, a final implant gen
 
 * Powerful, simple, and comfortable UI
 * Following the minimal principle to ensure maximum flexibility in usage
-* Supports two types: shellcode embedded in implants(Local) and hosted on remote servers(Remote)
+* Support two types: shellcode embedded in implants(Local) and hosted on remote servers(Remote)
 * Re-selecting the current plugin will generate a new random encryption password
 * Filling with random data to ensure each generated implant is unique
 * We have user manual, you no longer need to educate your users
 * No dependencies, just PumpBin
 * Support description, you can write down anything you want to remind users, which is important
+* No network connection, eliminating any security concerns
 * ... And I'm a pumpkin, I have magic🪄
