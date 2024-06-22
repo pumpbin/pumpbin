@@ -92,6 +92,23 @@ impl Pumpbin {
         }
     }
 
+    fn random_encrypt_pass(&mut self) {
+        match self.encrypt_type() {
+            EncryptType::None => self.encrypt_type = EncryptType::None,
+            EncryptType::Xor(x) => {
+                let mut pass = x.clone();
+                rand::thread_rng().fill_bytes(&mut pass);
+                self.encrypt_type = EncryptType::Xor(pass);
+            }
+            EncryptType::AesGcm(x) => {
+                let mut pass = x.clone();
+                rand::thread_rng().fill_bytes(pass.key_holder_mut());
+                rand::thread_rng().fill_bytes(pass.nonce_holder_mut());
+                self.encrypt_type = EncryptType::AesGcm(pass);
+            }
+        }
+    }
+
     fn show_message(&mut self, message: String) {
         self.message = message;
     }
@@ -643,6 +660,10 @@ impl Application for Pumpbin {
 
                 if let Some(selected_plugin) = self.selected_plugin() {
                     if plugin.plugin_name() == selected_plugin {
+                        // random encryption pass
+                        self.random_encrypt_pass();
+                        self.show_message("Generated new random encryption passwords.".to_string());
+
                         return Task::none();
                     }
                 }
@@ -677,20 +698,7 @@ impl Application for Pumpbin {
                 self.supported_platforms = platforms;
 
                 // random pass
-                match plugin.encrypt_type() {
-                    EncryptType::None => self.encrypt_type = EncryptType::None,
-                    EncryptType::Xor(x) => {
-                        let mut pass = x.clone();
-                        rand::thread_rng().fill_bytes(&mut pass);
-                        self.encrypt_type = EncryptType::Xor(pass);
-                    }
-                    EncryptType::AesGcm(x) => {
-                        let mut pass = x.clone();
-                        rand::thread_rng().fill_bytes(pass.key_holder_mut());
-                        rand::thread_rng().fill_bytes(pass.nonce_holder_mut());
-                        self.encrypt_type = EncryptType::AesGcm(pass);
-                    }
-                }
+                self.random_encrypt_pass();
 
                 Task::none()
             }
@@ -1148,7 +1156,7 @@ impl Application for Pumpbin {
                     .width(Length::FillPortion(1))
                     .align_items(Alignment::Start),
                 column![row![b1n, github].align_items(Alignment::Center)]
-                    .width(Length::FillPortion(1))
+                    .width(Length::Shrink)
                     .align_items(Alignment::Center),
                 column![theme_list]
                     .width(Length::FillPortion(1))
