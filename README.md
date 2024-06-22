@@ -1,4 +1,4 @@
-# 🎃PumpBin
+# 🎃 PumpBin
 
 <p align="center">
   <img src="logo/pumpbin-256.png" height="30%" width="30%">
@@ -15,3 +15,15 @@ To evade security software, researchers usually write shellcode loaders, includi
 
 The second method is the reason for the creation of PumpBin, a final implant generation program. Cybersecurity researchers only need to follow PumpBin's guidelines to write implant templates and distribute them along with PumpBin to offensive personnel. (There are very few guidelines as PumpBin is highly flexible.)
 ![](https://github.com/pumpbin/pumpbin/assets/120295547/549bbfa8-d8a4-44c6-89e1-3f24ef7897d2)
+
+## ✨ Features
+
+* Powerful, simple, and comfortable UI
+* Following the minimal principle to ensure maximum flexibility in usage
+* Supports two types: shellcode embedded in implants(Local) and hosted on remote servers(Remote)
+* Re-selecting the current plugin will generate a new random encryption password
+* Filling with random data to ensure each generated implant is unique
+* We have user manual, you no longer need to educate your users
+* No dependencies, just PumpBin
+* Support description, you can write down anything you want to remind users, which is important
+* ... And I'm a pumpkin, I have magic🪄
