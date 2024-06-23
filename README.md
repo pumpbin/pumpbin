@@ -7,7 +7,7 @@
 **PumpBin** is an Implant Generation Platform.
 
 To use PumpBin, you need to have a b1n file or create one. A b1n file contains one or more binary implant templates, along with some additional descriptive information. We refer to a b1n file as a Plugin.
-![](https://github.com/pumpbin/pumpbin/assets/120295547/549bbfa8-d8a4-44c6-89e1-3f24ef7897d2)
+![](https://github.com/pumpbin/pumpbin/assets/120295547/2c94a40f-a370-4cef-a676-3a843e535edb)
 
 ## ✨ Features
 
@@ -23,7 +23,6 @@ To use PumpBin, you need to have a b1n file or create one. A b1n file contains o
 * ... And I'm a pumpkin, I have magic🪄
 
 ## ❔ Why
-
 
 Modern cybersecurity teams are divided into offensive personnel and cybersecurity researchers, with researchers responsible for producing digital weapons. The teams typically deploy post-exploitation tools like Cobalt Strike, BRC4, or similar.
 To evade security software, researchers usually write shellcode loaders, including evasion code to create the final implant. This process generally follows two methods.
