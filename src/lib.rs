@@ -687,6 +687,7 @@ impl Application for Pumpbin {
                 self.supported_platforms = platforms;
 
                 // random pass
+                self.encrypt_type = plugin.encrypt_type().clone();
                 self.random_encrypt_pass();
 
                 Task::none()

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display, fs, ops::Not, path::Path};
 
-use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
+use aes_gcm::{aead::Aead, Aes256Gcm, Key, KeyInit, Nonce};
 use anyhow::anyhow;
 use bincode::{decode_from_slice, encode_to_vec, Decode, Encode};
 use dirs::data_dir;
@@ -77,11 +77,10 @@ impl EncryptType {
                 .map(|(i, byte)| byte ^ x[i % x.len()])
                 .collect()),
             EncryptType::AesGcm(x) => {
-                let key = aes_gcm::Key::<Aes256Gcm>::from_slice(x.key_holder());
+                let key = Key::<Aes256Gcm>::from_slice(x.key_holder());
                 let aes = Aes256Gcm::new(key);
                 let nonce = Nonce::from_slice(x.nonce_holder());
-                aes.encrypt(nonce, data.as_slice())
-                    .map_err(|e| anyhow!(e.to_string()))
+                aes.encrypt(nonce, data.as_slice()).map_err(|e| anyhow!(e))
             }
         }
     }
