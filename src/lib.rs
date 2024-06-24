@@ -8,7 +8,6 @@ use dirs::{desktop_dir, home_dir};
 use iced::{
     advanced::Application,
     executor,
-    font::{Family, Stretch, Style, Weight},
     widget::{
         button, column, container, horizontal_rule, pick_list, row, scrollable,
         svg::{self, Handle},
@@ -21,6 +20,8 @@ use memchr::memmem;
 use plugin::{EncryptType, Plugin, Plugins};
 use rand::RngCore;
 use rfd::AsyncFileDialog;
+
+pub const FONT: Font = Font::with_name("JetBrainsMono NFP");
 
 #[derive(Debug)]
 pub struct Pumpbin {
@@ -80,12 +81,7 @@ impl Pumpbin {
                 ..Default::default()
             },
             fonts: vec![include_bytes!("../assets/JetBrainsMonoNerdFontPropo-Regular.ttf").into()],
-            default_font: Font {
-                family: Family::Name("JetBrainsMono Nerd Font"),
-                weight: Weight::Normal,
-                stretch: Stretch::Normal,
-                style: Style::Normal,
-            },
+            default_font: FONT,
             default_text_size: Pixels(13.0),
             antialiasing: true,
             ..Default::default()
@@ -725,7 +721,6 @@ impl Application for Pumpbin {
     fn view(&self) -> iced::Element<'_, Self::Message, Self::Theme, iced::Renderer> {
         let padding = 20;
         let spacing = 20;
-        let font = Font::with_name("JetBrainsMono Nerd Font");
 
         let shellcode_src = row![
             text_input(
@@ -737,7 +732,7 @@ impl Application for Pumpbin {
             )
             .on_input(Message::ShellcodeSrcChanged)
             .icon(text_input::Icon {
-                font,
+                font: FONT,
                 code_point: '󱓞',
                 size: None,
                 spacing: 12.0,
@@ -757,14 +752,14 @@ impl Application for Pumpbin {
 
         let pick_list_handle = || pick_list::Handle::Dynamic {
             closed: pick_list::Icon {
-                font,
+                font: FONT,
                 code_point: '',
                 size: None,
                 line_height: text::LineHeight::Relative(1.0),
                 shaping: text::Shaping::Basic,
             },
             open: pick_list::Icon {
-                font,
+                font: FONT,
                 code_point: '',
                 size: None,
                 line_height: text::LineHeight::Relative(1.0),

@@ -8,11 +8,11 @@ use iced::{
         button, column, horizontal_rule, pick_list, radio, row, svg::Handle, text, text_editor,
         text_input, Svg,
     },
-    Alignment, Font, Length, Renderer, Task, Theme,
+    Alignment, Length, Renderer, Task, Theme,
 };
 use pumpbin::{
     plugin::{Bins, Plugin},
-    svg_style, ShellcodeSaveType,
+    svg_style, ShellcodeSaveType, FONT,
 };
 use pumpbin::{
     plugin::{EncryptType, Platforms},
@@ -531,8 +531,6 @@ impl Application for Maker {
     }
 
     fn view(&self) -> iced::Element<'_, Self::Message, Self::Theme, Self::Renderer> {
-        let font = Font::with_name("JetBrainsMono Nerd Font");
-
         let choose_button = || {
             button(
                 Svg::new(Handle::from_memory(include_bytes!(
@@ -544,14 +542,14 @@ impl Application for Maker {
 
         let pick_list_handle = || pick_list::Handle::Dynamic {
             closed: pick_list::Icon {
-                font,
+                font: FONT,
                 code_point: '',
                 size: None,
                 line_height: text::LineHeight::Relative(1.0),
                 shaping: text::Shaping::Basic,
             },
             open: pick_list::Icon {
-                font,
+                font: FONT,
                 code_point: '',
                 size: None,
                 line_height: text::LineHeight::Relative(1.0),
