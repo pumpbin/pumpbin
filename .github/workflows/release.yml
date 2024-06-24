@@ -1,0 +1,29 @@
+name: build-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: build-windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+            toolchain:
+              stable-x86_64-pc-windows-msvc
+      - run: cargo b -r
+      - run: mv target/release/pumpbin.exe PumpBin-x86_64-pc-windows-msvc.exe
+      - run: mv target/release/maker.exe PumpBin-Maker-x86_64-pc-windows-msvc.exe
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            PumpBin-x86_64-pc-windows-msvc.exe
+            PumpBin-Maker-x86_64-pc-windows-msvc.exe
