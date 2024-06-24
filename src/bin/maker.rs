@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use std::{fs, path::PathBuf, time::Duration, usize};
 
 use dirs::{desktop_dir, home_dir};

@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use iced::advanced::Application;
 use pumpbin::Pumpbin;
 
