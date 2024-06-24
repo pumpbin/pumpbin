@@ -30,3 +30,9 @@ git = "https://github.com/iced-rs/iced"
 rev = "6c1027af8d54ad21e282337b53097eb196d62c00"
 default-features = false
 features = ["advanced", "svg", "tokio", "wgpu"]
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
