@@ -6,7 +6,7 @@
 
 **PumpBin** is an Implant Generation Platform.
 
-To use PumpBin, you need to have a b1n file or create one. A b1n file contains one or more binary implant templates, along with some additional descriptive information. We refer to a b1n file as a Plugin.
+To use PumpBin, you need to have a b1n file or [Create One](https://pumpbin.b1n.io/devs/start.html). A b1n file contains one or more binary implant templates, along with some additional descriptive information. We refer to a b1n file as a Plugin.
 
 ![](https://github.com/pumpbin/pumpbin/assets/120295547/2c94a40f-a370-4cef-a676-3a843e535edb)
 
