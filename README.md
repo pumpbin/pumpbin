@@ -15,7 +15,7 @@ To use PumpBin, you need to have a b1n file or create one. A b1n file contains o
 * Powerful, simple, and comfortable UI
 * Following the minimal principle to ensure maximum flexibility in usage
 * Support two Plugin types: shellcode embedded in implants(Local) and hosted on remote servers(Remote)
-* Support the development of Plugin using any compiled language, such as C/C++, Rust, Zig, Go, and more
+* Support plugin development using any compiled language, such as C/C++, Rust, Zig, Go, etc
 * Re-selecting the current plugin will generate a new random encryption password
 * Filling with random data to ensure each generated implant is unique
 * We have user manual, you no longer need to educate your users
