@@ -6,7 +6,7 @@ use std::{fmt::Display, fs, iter, ops::Not, path::PathBuf, time::Duration};
 
 use dirs::{desktop_dir, home_dir};
 use iced::{
-    advanced::Application,
+    advanced::{graphics::image::image_rs::ImageFormat, Application},
     executor,
     widget::{
         button, column, container, horizontal_rule, pick_list, row, scrollable,
@@ -77,6 +77,13 @@ impl Pumpbin {
                 decorations: true,
                 transparent: false,
                 level: Level::Normal,
+                icon: match window::icon::from_file_data(
+                    include_bytes!("../logo/icon.png"),
+                    Some(ImageFormat::Png),
+                ) {
+                    Ok(x) => Some(x),
+                    Err(_) => None,
+                },
                 exit_on_close_request: true,
                 ..Default::default()
             },

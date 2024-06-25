@@ -1,5 +1,6 @@
 fn main() {
-    if std::env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows" {
+    #[cfg(target_os = "windows")]
+    {
         let mut res = winresource::WindowsResource::new();
         res.set_icon("logo/icon.ico");
         res.compile().unwrap();
