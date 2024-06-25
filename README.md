@@ -24,6 +24,10 @@ To use PumpBin, you need to have a b1n file or [Create One](https://pumpbin.b1n.
 * No network connection, eliminating any security concerns
 * ... And I'm a pumpkin, I have magic🪄
 
+## 🚀 Getting Started
+
+Check the [PumpBin Documentation](https://pumpbin.b1n.io) for more information.
+
 ## ❔ Why
 
 Modern cybersecurity teams are divided into offensive personnel and cybersecurity researchers, with researchers responsible for producing digital weapons. The teams typically deploy post-exploitation tools like Cobalt Strike, BRC4, or similar.
