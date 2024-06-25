@@ -33,6 +33,6 @@ features = ["advanced", "svg", "tokio", "wgpu"]
 
 [profile.release]
 strip = true
-opt-level = "z"
+opt-level = 3
 lto = true
 codegen-units = 1
