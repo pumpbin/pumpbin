@@ -1,3 +1,24 @@
+<div align="center"><p>
+  <a href="https://github.com/pumpbin/pumpbin/releases/latest">
+    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/pumpbin/pumpbin?sort=semver&filter=v*.*.*&display_name=tag&style=for-the-badge&labelColor=%2324273a&color=%238aadf4">
+  </a>
+  <a href="https://github.com/pumpbin/pumpbin/commits/main">
+    <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/pumpbin/pumpbin?display_timestamp=author&style=for-the-badge&labelColor=%2324273a&color=%23a6da95">
+  </a>
+  <a href="https://github.com/pumpbin/pumpbin/blob/main/LICENSE">
+    <img alt="GitHub License" src="https://img.shields.io/github/license/pumpbin/pumpbin?style=for-the-badge&labelColor=%2324273a&color=%23eed49f">
+  </a>
+  <a href="https://github.com/pumpbin/pumpbin/stargazers">
+    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/pumpbin/pumpbin?style=for-the-badge&labelColor=%2324273a&color=%23f5bde6">
+  </a>
+  <a href="https://github.com/pumpbin/pumpbin/issues">
+    <img alt="GitHub Issues or Pull Requests" src="https://img.shields.io/github/issues/pumpbin/pumpbin?style=for-the-badge&labelColor=%2324273a&color=%23ed8796">
+  </a>
+  <a href="https://x.com/b1nhack">
+    <img alt="X (formerly Twitter) Follow" src="https://img.shields.io/twitter/follow/b1nhack?style=for-the-badge&logo=x&label=FOLLOW&labelColor=%2324273a&color=%237dc4e4">
+  </a>
+</div>
+
 # 🎃 PumpBin
 
 <p align="center">
