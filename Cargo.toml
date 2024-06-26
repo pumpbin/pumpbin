@@ -1,6 +1,6 @@
 [package]
 name = "pumpbin"
-version = "0.1.1"
+version = "0.1.0"
 authors = ["b1n <b1n@b1n.io>"]
 edition = "2021"
 description = "PumpBin is an Implant Generation Platform."
@@ -17,7 +17,7 @@ name = "maker"
 path = "src/bin/maker.rs"
 
 [dependencies]
-rfd = { version = "0.14.1", default-features = false}
+rfd = "0.14.1"
 dirs = "5.0.1"
 flatbuffers = "24.3.25"
 open = "5.1.4"
@@ -28,15 +28,15 @@ memchr = "2.7.4"
 aes-gcm = "0.10.3"
 tokio = { version = "1.38.0", default-features = false , features = ["time"]}
 
-[package.metadata.winresource]
-LegalCopyright = "Copyright (c) 2024 b1n <b1n@b1n.io>"
-
 [dependencies.iced]
 version = "0.13.0-dev"
 git = "https://github.com/iced-rs/iced"
 rev = "6c1027af8d54ad21e282337b53097eb196d62c00"
 default-features = false
 features = ["advanced", "svg", "tokio", "wgpu", "image"]
+
+[package.metadata.winresource]
+LegalCopyright = "Copyright (c) 2024 b1n <b1n@b1n.io>"
 
 [target."cfg(windows)".build-dependencies]
 winresource = "0.1.17"

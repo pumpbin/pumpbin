@@ -2356,7 +2356,7 @@ checksum = "43d84d1d7a6ac92673717f9f6d1518374ef257669c24ebc5ac25d5033828be58"
 
 [[package]]
 name = "pumpbin"
-version = "0.1.1"
+version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
