@@ -26,3 +26,20 @@ jobs:
           files: |
             PumpBin-x86_64-pc-windows-msvc.exe
             PumpBin-Maker-x86_64-pc-windows-msvc.exe
+
+  build-macos:
+    name: build-macos
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
+      - run: bash scripts/build-macos.sh
+      - run: mv target/release/macos-pumpbin/PumpBin.dmg PumpBin.dmg
+      - run: mv target/release/macos-maker/PumpBin-Maker.dmg PumpBin-Maker.dmg
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            PumpBin.dmg
+            PumpBin-Maker.dmg

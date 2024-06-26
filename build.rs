@@ -5,4 +5,12 @@ fn main() {
         res.set_icon("logo/icon.ico");
         res.compile().unwrap();
     }
+
+    #[cfg(target_os = "macos")]
+    {
+        use std::fs;
+
+        let version = env!("CARGO_PKG_VERSION");
+        fs::write("VERSION", version).unwrap();
+    }
 }

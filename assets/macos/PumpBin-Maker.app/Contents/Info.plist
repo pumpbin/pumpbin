@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleExecutable</key>
+  <string>maker</string>
+  <key>CFBundleIdentifier</key>
+  <string>io.b1n.pumpbin-maker</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>PumpBin-Maker</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>{{ VERSION }}</string>
+  <key>CFBundleSupportedPlatforms</key>
+  <array>
+    <string>MacOSX</string>
+  </array>
+  <key>CFBundleVersion</key>
+  <string>{{ BUILD }}</string>
+  <key>CFBundleIconFile</key>
+  <string>icon.png</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSMainNibFile</key>
+  <string></string>
+  <key>NSSupportsAutomaticGraphicsSwitching</key>
+  <true/>
+  <key>CFBundleDisplayName</key>
+  <string>PumpBin-Maker</string>
+  <key>NSRequiresAquaSystemAppearance</key>
+  <string>NO</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>PumpBin-Maker</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>pumpbin-maker</string>
+      </array>
+    </dict>
+  </array>
+</dict>
+</plist>
