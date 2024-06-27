@@ -224,3 +224,76 @@ impl Plugins {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::io::Write;
+
+    use tempfile::NamedTempFile;
+
+    use super::*;
+
+    #[test]
+    fn test_plugin() {
+        let plugin = Plugin {
+            plugin_name: "test_plugin".into(),
+            author: Some("b1n".into()),
+            version: Some("0.1.0".into()),
+            desc: Some("test desc".into()),
+            prefix: b"$$SHELLCODE$$".to_vec(),
+            size_holder: Some(b"$$99999$$".to_vec()),
+            max_len: 1024 * 1024,
+            encrypt_type: EncryptType::AesGcm(AesGcmPass {
+                key_holder: b"key".to_vec(),
+                nonce_holder: b"nonce".to_vec(),
+            }),
+            platforms: Platforms {
+                windows: None,
+                linux: None,
+                darwin: None,
+            },
+        };
+
+        let plugin_file = NamedTempFile::new().unwrap();
+        plugin.write_plugin(plugin_file.path()).unwrap();
+
+        let decode_plugin = Plugin::reade_plugin(plugin_file.path()).unwrap();
+
+        assert_eq!(decode_plugin, plugin);
+    }
+
+    #[test]
+    fn test_xor_encrypt() {
+        let mut plain_text = NamedTempFile::new().unwrap();
+        plain_text.as_file_mut().write_all(b"test").unwrap();
+
+        let pass = b"pass";
+        let xor = EncryptType::Xor(pass.to_vec());
+        let encrypted = xor.encrypt(plain_text.path()).unwrap();
+        let decrypted: Vec<u8> = encrypted
+            .iter()
+            .enumerate()
+            .map(|(i, byte)| byte ^ pass[i % pass.len()])
+            .collect();
+        assert_eq!(decrypted.as_slice(), b"test");
+    }
+
+    #[test]
+    fn test_aes_gcm_encrypt() {
+        let mut plain_text = NamedTempFile::new().unwrap();
+        plain_text.as_file_mut().write_all(b"test").unwrap();
+
+        let pass = AesGcmPass {
+            key_holder: b"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk".to_vec(),
+            nonce_holder: b"nnnnnnnnnnnn".to_vec(),
+        };
+        let aes_gcm = EncryptType::AesGcm(pass.clone());
+        let encrypted = aes_gcm.encrypt(plain_text.path()).unwrap();
+
+        let aes = Aes256Gcm::new_from_slice(pass.key_holder()).unwrap();
+        let nonce = Nonce::from_slice(pass.nonce_holder());
+        let decrypted = aes.decrypt(nonce, encrypted.as_slice()).unwrap();
+
+        assert_eq!(decrypted.as_slice(), b"test");
+    }
+}

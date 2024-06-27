@@ -41,6 +41,9 @@ LegalCopyright = "Copyright (c) 2024 b1n <b1n@b1n.io>"
 [target."cfg(windows)".build-dependencies]
 winresource = "0.1.17"
 
+[dev-dependencies]
+tempfile = "3.10.1"
+
 [profile.release]
 strip = true
 opt-level = 3
