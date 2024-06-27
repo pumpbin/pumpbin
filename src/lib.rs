@@ -21,7 +21,7 @@ use plugin::{EncryptType, Plugin, Plugins};
 use rand::RngCore;
 use rfd::AsyncFileDialog;
 
-pub const FONT: Font = Font::with_name("JetBrainsMono NFP");
+pub const FONT: Font = Font::with_name("JetBrainsMono NF");
 
 #[derive(Debug)]
 pub struct Pumpbin {
@@ -87,7 +87,7 @@ impl Pumpbin {
                 exit_on_close_request: true,
                 ..Default::default()
             },
-            fonts: vec![include_bytes!("../assets/JetBrainsMonoNerdFontPropo-Regular.ttf").into()],
+            fonts: vec![include_bytes!("../assets/JetBrainsMonoNerdFont-Regular.ttf").into()],
             default_font: FONT,
             default_text_size: Pixels(13.0),
             antialiasing: true,
@@ -852,10 +852,10 @@ impl Application for Pumpbin {
 
             let item = button(
                 column![
-                    text!("  {}", plugin_name).width(Length::Fill),
+                    text!(" {}", plugin_name).width(Length::Fill),
                     row![
                         column![text!(
-                            "  {}",
+                            " {}",
                             match plugin.author() {
                                 Some(x) => x.to_owned(),
                                 None => "None".into(),
