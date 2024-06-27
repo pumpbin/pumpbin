@@ -852,7 +852,7 @@ impl Application for Pumpbin {
 
             let item = button(
                 column![
-                    text!("  {}", plugin_name),
+                    text!("  {}", plugin_name).width(Length::Fill),
                     row![
                         column![text!(
                             "  {}",
@@ -861,7 +861,7 @@ impl Application for Pumpbin {
                                 None => "None".into(),
                             }
                         )]
-                        .width(Length::FillPortion(2))
+                        .width(Length::Fill)
                         .align_items(Alignment::Start),
                         column![row!(
                             text(" ").color(self.theme().extended_palette().primary.base.color),
@@ -887,15 +887,14 @@ impl Application for Pumpbin {
                             }
                         )
                         .align_items(Alignment::Center)]
-                        .width(Length::FillPortion(1))
+                        .width(Length::Shrink)
                         .align_items(Alignment::End)
                     ]
                     .align_items(Alignment::Center),
                 ]
-                .align_items(Alignment::Start),
+                .align_items(Alignment::Center),
             )
             .width(Length::Fill)
-            .height(50)
             .style(match self.selected_plugin() {
                 Some(x) if x == &plugin_name => button_style::selected,
                 _ => button_style::unselected,
@@ -945,7 +944,7 @@ impl Application for Pumpbin {
                 row![
                     column![
                         row![column![
-                            plugin_info_title(" Name:"),
+                            plugin_info_title(" Name:"),
                             plugin_info_title(" Author:"),
                             plugin_info_title(" Version:"),
                             plugin_info_title("󰰥 Type:"),
