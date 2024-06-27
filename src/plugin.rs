@@ -1,9 +1,14 @@
-use std::{collections::HashMap, fmt::Display, fs, ops::Not, path::Path};
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    fs,
+    path::{Path, PathBuf},
+    sync::OnceLock,
+};
 
 use aes_gcm::{aead::Aead, Aes256Gcm, Key, KeyInit, Nonce};
 use anyhow::anyhow;
 use bincode::{decode_from_slice, encode_to_vec, Decode, Encode};
-use dirs::data_dir;
 
 // 500 MiB
 const LIMIT: usize = 1024 * 1024 * 500;
@@ -13,6 +18,8 @@ pub const BINCODE_PLUGIN_CONFIG: bincode::config::Configuration<
     bincode::config::Limit<LIMIT>,
 > = bincode::config::standard().with_limit();
 const BINCODE_PLUGINS_CONFIG: bincode::config::Configuration = bincode::config::standard();
+
+pub static CONFIG_FILE_PATH: OnceLock<PathBuf> = OnceLock::new();
 
 #[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct AesGcmPass {
@@ -194,31 +201,25 @@ pub struct Plugins(pub HashMap<String, Plugin>);
 
 impl Plugins {
     pub fn reade_plugins() -> anyhow::Result<Plugins> {
-        let mut plugins_path = data_dir().ok_or(anyhow::anyhow!("data_dir is none."))?;
-        plugins_path.push("pumpbin");
-        plugins_path.push("plugins");
+        let plugins_path = CONFIG_FILE_PATH
+            .get()
+            .ok_or(anyhow!("Get config file path failed."))?;
 
-        if plugins_path.exists() && plugins_path.is_file() {
-            let buf = fs::read(plugins_path)?;
-            let (plugins, _) = decode_from_slice(buf.as_slice(), BINCODE_PLUGINS_CONFIG)?;
-            Ok(plugins)
-        } else {
-            anyhow::bail!("file not exists.")
-        }
+        let buf = fs::read(plugins_path)?;
+        let (plugins, _) = decode_from_slice(buf.as_slice(), BINCODE_PLUGINS_CONFIG)?;
+        Ok(plugins)
     }
 
     pub fn uptade_plugins(&self) -> anyhow::Result<()> {
         let buf = encode_to_vec(self, BINCODE_PLUGINS_CONFIG)?;
+        let plugins_path = CONFIG_FILE_PATH
+            .get()
+            .ok_or(anyhow!("Get config file path failed."))?;
 
-        let mut plugins_path = data_dir().ok_or(anyhow::anyhow!("data_dir is none."))?;
-        plugins_path.push("pumpbin");
-        if plugins_path.exists().not() {
-            fs::create_dir_all(&plugins_path)?;
-        } else if plugins_path.exists() && plugins_path.is_dir().not() {
-            fs::remove_file(&plugins_path)?;
-            fs::create_dir_all(&plugins_path)?;
+        if plugins_path.is_dir() {
+            fs::remove_dir(plugins_path)?;
         }
-        plugins_path.push("plugins");
+
         fs::write(plugins_path, buf)?;
 
         Ok(())
