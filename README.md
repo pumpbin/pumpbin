@@ -27,7 +27,7 @@ To use PumpBin, you need to have a b1n file or [Create One](https://pumpbin.b1n.
 A b1n file contains one or more binary implant templates, along with some additional descriptive information.
 We refer to a b1n file as a Plugin.
 
-![](https://github.com/pumpbin/pumpbin/assets/120295547/179b96d2-e697-467c-9bc6-bd711f49e037)
+![](https://github.com/pumpbin/pumpbin/assets/120295547/9f3154a5-9a72-49d4-996b-0d7acf40f197)
 
 ## ✨ Features
 
