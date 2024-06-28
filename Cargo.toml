@@ -1,6 +1,6 @@
 [package]
 name = "pumpbin"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["b1n <b1n@b1n.io>"]
 edition = "2021"
 description = "PumpBin is an Implant Generation Platform."
@@ -17,7 +17,7 @@ name = "maker"
 path = "src/bin/maker.rs"
 
 [dependencies]
-rfd = "0.14.1"
+rfd = { version = "0.14.1", default-features = false , features = ["gtk3"]}
 dirs = "5.0.1"
 flatbuffers = "24.3.25"
 open = "5.1.4"

@@ -52,9 +52,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu
-      - run: sudo apt-get install -y crossbuild-essential-arm64
+      - run: sudo dpkg --add-architecture arm64
+      - run: sudo rm -f /etc/apt/sources.list
+      - run: sudo curl -o /etc/apt/sources.list https://gist.githubusercontent.com/b1nhack/a647647822957622b5e92a45f9d67f8e/raw/78c28ae9375c0c7c2e9182d1f1944caf3e7ceb7a/sources.list
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y libcups2:arm64
+      - run: sudo apt-get install -y gcc-aarch64-linux-gnu libgtk-3-dev libgtk-3-dev:arm64
       - run: cargo build --release --target=x86_64-unknown-linux-gnu
-      - run: cargo build --release --target=aarch64-unknown-linux-gnu
+      - run: PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu/ cargo build --release --target=aarch64-unknown-linux-gnu
       - run: mv target/x86_64-unknown-linux-gnu/release/pumpbin PumpBin-x86_64-unknown-linux-gnu
       - run: mv target/x86_64-unknown-linux-gnu/release/maker PumpBin-Maker-x86_64-unknown-linux-gnu
       - run: mv target/aarch64-unknown-linux-gnu/release/pumpbin PumpBin-aarch64-unknown-linux-gnu
