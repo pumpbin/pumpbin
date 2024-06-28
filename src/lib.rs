@@ -830,7 +830,7 @@ impl Application for Pumpbin {
                     .width(30)
                     .height(30)
                     .style(svg_style::svg_primary_base),
-                    text("Did you see that   sign? 󰁂")
+                    text("Did you see that  sign? 󰁂")
                         .color(self.theme().extended_palette().primary.base.color)
                 ]
                 .spacing(spacing)
