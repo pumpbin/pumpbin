@@ -1,6 +1,6 @@
 [package]
 name = "pumpbin"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["b1n <b1n@b1n.io>"]
 edition = "2021"
 description = "PumpBin is an Implant Generation Platform."

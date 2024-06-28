@@ -2,7 +2,7 @@ mod button_style;
 pub mod plugin;
 pub mod svg_style;
 
-use std::{fmt::Display, fs, iter, ops::Not, path::PathBuf, time::Duration};
+use std::{fmt::Display, fs, iter, ops::Not, path::PathBuf};
 
 use dirs::{desktop_dir, home_dir};
 use iced::{
@@ -19,9 +19,63 @@ use iced::{
 use memchr::memmem;
 use plugin::{EncryptType, Plugin, Plugins};
 use rand::RngCore;
-use rfd::AsyncFileDialog;
+use rfd::{
+    AsyncFileDialog, AsyncMessageDialog, MessageButtons, MessageDialog, MessageDialogResult,
+    MessageLevel,
+};
 
-pub const FONT: Font = Font::with_name("JetBrainsMono NF");
+pub const JETBRAINS_MONO_FONT: Font = Font::with_name("JetBrainsMono NF");
+
+pub fn error_dialog(error: anyhow::Error) {
+    MessageDialog::new()
+        .set_buttons(MessageButtons::Ok)
+        .set_description(error.to_string())
+        .set_level(MessageLevel::Error)
+        .set_title("PumpBin")
+        .show();
+}
+
+pub fn show_message(message: String, level: MessageLevel) -> Task<MessageDialogResult> {
+    let dialog = AsyncMessageDialog::new()
+        .set_buttons(MessageButtons::Ok)
+        .set_description(message)
+        .set_level(level)
+        .set_title("PumpBin")
+        .show();
+    Task::future(dialog)
+}
+
+pub fn settings() -> Settings {
+    let size = Size::new(1000.0, 600.0);
+
+    Settings {
+        id: Some(env!("CARGO_PKG_NAME").into()),
+        window: window::Settings {
+            size,
+            position: Position::Centered,
+            min_size: Some(size),
+            visible: true,
+            resizable: true,
+            decorations: true,
+            transparent: false,
+            level: Level::Normal,
+            icon: match window::icon::from_file_data(
+                include_bytes!("../logo/icon.png"),
+                Some(ImageFormat::Png),
+            ) {
+                Ok(x) => Some(x),
+                Err(_) => None,
+            },
+            exit_on_close_request: true,
+            ..Default::default()
+        },
+        fonts: vec![include_bytes!("../assets/JetBrainsMonoNerdFont-Regular.ttf").into()],
+        default_font: JETBRAINS_MONO_FONT,
+        default_text_size: Pixels(13.0),
+        antialiasing: true,
+        ..Default::default()
+    }
+}
 
 #[derive(Debug)]
 pub struct Pumpbin {
@@ -29,7 +83,7 @@ pub struct Pumpbin {
     shellcode_save_type: ShellcodeSaveType,
     supported_binary_types: Vec<BinaryType>,
     selected_binary_type: Option<BinaryType>,
-    message: String,
+    version: String,
     supported_platforms: Vec<Platform>,
     selected_platform: Option<Platform>,
     plugins: Plugins,
@@ -46,7 +100,7 @@ impl Default for Pumpbin {
             shellcode_save_type: ShellcodeSaveType::Local,
             supported_binary_types: Default::default(),
             selected_binary_type: None,
-            message: "Welcome to PumpBin!".into(),
+            version: env!("CARGO_PKG_VERSION").into(),
             supported_platforms: Default::default(),
             selected_platform: None,
             plugins: if let Ok(plugins) = Plugins::reade_plugins() {
@@ -63,38 +117,6 @@ impl Default for Pumpbin {
 }
 
 impl Pumpbin {
-    pub fn settings() -> Settings {
-        let size = Size::new(1000.0, 600.0);
-
-        Settings {
-            id: Some(env!("CARGO_PKG_NAME").into()),
-            window: window::Settings {
-                size,
-                position: Position::Centered,
-                min_size: Some(size),
-                visible: true,
-                resizable: true,
-                decorations: true,
-                transparent: false,
-                level: Level::Normal,
-                icon: match window::icon::from_file_data(
-                    include_bytes!("../logo/icon.png"),
-                    Some(ImageFormat::Png),
-                ) {
-                    Ok(x) => Some(x),
-                    Err(_) => None,
-                },
-                exit_on_close_request: true,
-                ..Default::default()
-            },
-            fonts: vec![include_bytes!("../assets/JetBrainsMonoNerdFont-Regular.ttf").into()],
-            default_font: FONT,
-            default_text_size: Pixels(13.0),
-            antialiasing: true,
-            ..Default::default()
-        }
-    }
-
     fn random_encrypt_pass(&mut self) {
         match self.encrypt_type() {
             EncryptType::None => self.encrypt_type = EncryptType::None,
@@ -110,14 +132,6 @@ impl Pumpbin {
                 self.encrypt_type = EncryptType::AesGcm(pass);
             }
         }
-    }
-
-    fn show_message(&mut self, message: String) -> Task<Message> {
-        self.message = message;
-        let wait = async {
-            tokio::time::sleep(Duration::from_secs(3)).await;
-        };
-        Task::perform(wait, Message::ClearMessage)
     }
 
     pub fn shellcode_src(&self) -> &str {
@@ -136,8 +150,8 @@ impl Pumpbin {
         self.selected_binary_type
     }
 
-    pub fn message(&self) -> &str {
-        &self.message
+    pub fn version(&self) -> &str {
+        &self.version
     }
 
     pub fn supported_platforms(&self) -> &[Platform] {
@@ -189,7 +203,6 @@ pub enum Message {
     B1nClicked,
     GithubClicked,
     ThemeChanged(Theme),
-    ClearMessage(()),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -281,8 +294,6 @@ impl Application for Pumpbin {
             Message::ChooseShellcodeDone(x) => {
                 if let Some(path) = x {
                     self.shellcode_src = path.to_string_lossy().to_string();
-                } else {
-                    return self.show_message("Canceled shellcode selection.".into());
                 }
                 Task::none()
             }
@@ -361,23 +372,28 @@ impl Application for Pumpbin {
 
                         Ok(())
                     };
-                    Task::perform(write_encrypted, Message::EncryptShellcodeDone)
-                } else {
-                    self.show_message("Canceled shellcode selection.".into())
-                }
+                    return Task::perform(write_encrypted, Message::EncryptShellcodeDone);
+                };
+                Task::none()
             }
-            Message::EncryptShellcodeDone(x) => self.show_message(match x {
-                Ok(_) => "Saved encrypted shellcode.".into(),
-                Err(e) => e,
-            }),
+            Message::EncryptShellcodeDone(x) => {
+                match x {
+                    Ok(_) => show_message("Saved encrypted shellcode.".into(), MessageLevel::Info),
+                    Err(e) => show_message(e, MessageLevel::Error),
+                };
+
+                Task::none()
+            }
             Message::GenerateClicked => {
                 // verify path if local mode
                 let path = PathBuf::from(self.shellcode_src());
                 if self.shellcode_save_type() == ShellcodeSaveType::Local {
                     if path.exists().not() {
-                        return self.show_message("Shellcode path not exists.".into());
+                        show_message("Shellcode path not exists.".into(), MessageLevel::Error);
+                        return Task::none();
                     } else if path.is_file().not() {
-                        return self.show_message("Shellcode path is not a file.".into());
+                        show_message("Shellcode path is not a file.".into(), MessageLevel::Error);
+                        return Task::none();
                     }
                 }
 
@@ -547,10 +563,14 @@ impl Application for Pumpbin {
 
                 Task::perform(generate, Message::GenerateDone)
             }
-            Message::GenerateDone(x) => self.show_message(match x {
-                Ok(_) => "Saved generated binary.".into(),
-                Err(e) => e,
-            }),
+            Message::GenerateDone(x) => {
+                match x {
+                    Ok(_) => show_message("Saved generated binary.".into(), MessageLevel::Info),
+                    Err(e) => show_message(e, MessageLevel::Error),
+                };
+
+                Task::none()
+            }
             Message::BinaryTypeChanged(x) => {
                 self.selected_binary_type = Some(x);
                 Task::none()
@@ -602,10 +622,16 @@ impl Application for Pumpbin {
                             self.update(Message::PluginItemClicked(selected_plugin));
                         }
                         self.plugins = plugins;
-                        self.show_message(format!("Added {} plugins, {} failed.", success, failed))
+                        show_message(
+                            format!("Added {} plugins, {} failed.", success, failed),
+                            MessageLevel::Info,
+                        );
                     }
-                    Err(e) => self.show_message(e),
+                    Err(e) => {
+                        show_message(e, MessageLevel::Error);
+                    }
                 }
+                Task::none()
             }
             Message::RemovePlugin(x) => {
                 let mut plugins = self.plugins().clone();
@@ -623,28 +649,36 @@ impl Application for Pumpbin {
                 };
                 Task::perform(remove_plugin, Message::RemovePluginDone)
             }
-            Message::RemovePluginDone(x) => match x {
-                Ok((plugin_name, plugins)) => {
-                    self.plugins = plugins;
+            Message::RemovePluginDone(x) => {
+                match x {
+                    Ok((plugin_name, plugins)) => {
+                        self.plugins = plugins;
 
-                    let mut names: Vec<String> =
-                        self.plugins().0.keys().map(|x| x.to_owned()).collect();
-                    names.sort();
+                        let mut names: Vec<String> =
+                            self.plugins().0.keys().map(|x| x.to_owned()).collect();
+                        names.sort();
 
-                    if let Some(name) = names.first() {
-                        _ = self.update(Message::PluginItemClicked(name.to_owned()));
-                    } else {
-                        self.supported_binary_types = Default::default();
-                        self.selected_binary_type = None;
-                        self.supported_platforms = Default::default();
-                        self.selected_platform = None;
-                        self.selected_plugin = None;
-                        self.shellcode_save_type = ShellcodeSaveType::Local;
+                        if let Some(name) = names.first() {
+                            _ = self.update(Message::PluginItemClicked(name.to_owned()));
+                        } else {
+                            self.supported_binary_types = Default::default();
+                            self.selected_binary_type = None;
+                            self.supported_platforms = Default::default();
+                            self.selected_platform = None;
+                            self.selected_plugin = None;
+                            self.shellcode_save_type = ShellcodeSaveType::Local;
+                        }
+                        show_message(
+                            format!("Removed plugin {}", plugin_name),
+                            MessageLevel::Info,
+                        );
                     }
-                    self.show_message(format!("Removed plugin {}", plugin_name))
-                }
-                Err(e) => self.show_message(e),
-            },
+                    Err(e) => {
+                        show_message(e, MessageLevel::Error);
+                    }
+                };
+                Task::none()
+            }
             Message::PluginItemClicked(x) => {
                 // unwrap is safe.
                 // UI implemented strict restrictions.
@@ -654,9 +688,11 @@ impl Application for Pumpbin {
                     if plugin.plugin_name() == selected_plugin {
                         // random encryption pass
                         self.random_encrypt_pass();
-                        return self.show_message(
-                            "Generated new random encryption passwords.".to_string(),
+                        show_message(
+                            "Generated new random encryption passwords.".into(),
+                            MessageLevel::Info,
                         );
+                        return Task::none();
                     }
                 }
 
@@ -704,22 +740,18 @@ impl Application for Pumpbin {
             }
             Message::B1nClicked => {
                 if open::that(env!("CARGO_PKG_HOMEPAGE")).is_err() {
-                    return self.show_message("Open home failed.".into());
+                    show_message("Open home failed.".into(), MessageLevel::Error);
                 }
                 Task::none()
             }
             Message::GithubClicked => {
                 if open::that(env!("CARGO_PKG_REPOSITORY")).is_err() {
-                    return self.show_message("Open repo failed.".into());
+                    show_message("Open repo failed.".into(), MessageLevel::Error);
                 }
                 Task::none()
             }
             Message::ThemeChanged(x) => {
                 self.selected_theme = x;
-                Task::none()
-            }
-            Message::ClearMessage(_) => {
-                self.message = "Welcome to PumpBin!".to_string();
                 Task::none()
             }
         }
@@ -739,7 +771,7 @@ impl Application for Pumpbin {
             )
             .on_input(Message::ShellcodeSrcChanged)
             .icon(text_input::Icon {
-                font: FONT,
+                font: JETBRAINS_MONO_FONT,
                 code_point: '󱓞',
                 size: None,
                 spacing: 12.0,
@@ -759,14 +791,14 @@ impl Application for Pumpbin {
 
         let pick_list_handle = || pick_list::Handle::Dynamic {
             closed: pick_list::Icon {
-                font: FONT,
+                font: JETBRAINS_MONO_FONT,
                 code_point: '',
                 size: None,
                 line_height: text::LineHeight::Relative(1.0),
                 shaping: text::Shaping::Basic,
             },
             open: pick_list::Icon {
-                font: FONT,
+                font: JETBRAINS_MONO_FONT,
                 code_point: '',
                 size: None,
                 line_height: text::LineHeight::Relative(1.0),
@@ -1115,13 +1147,8 @@ impl Application for Pumpbin {
         .width(Length::Fill)
         .height(Length::Fill);
 
-        let message = row![
-            text(" ")
-                .color(self.theme().extended_palette().primary.base.color)
-                .size(25),
-            text(&self.message).color(self.theme().extended_palette().primary.base.color)
-        ]
-        .align_items(Alignment::Center);
+        let version = text(format!("PumpBin  v{}", self.version()))
+            .color(self.theme().extended_palette().primary.base.color);
 
         let b1n = button(
             Svg::new(Handle::from_memory(include_bytes!(
@@ -1153,14 +1180,14 @@ impl Application for Pumpbin {
         let footer = column![
             horizontal_rule(0),
             row![
-                column![message]
-                    .width(Length::FillPortion(1))
+                column![version]
+                    .width(Length::Fill)
                     .align_items(Alignment::Start),
                 column![row![b1n, github].align_items(Alignment::Center)]
                     .width(Length::Shrink)
                     .align_items(Alignment::Center),
                 column![theme_list]
-                    .width(Length::FillPortion(1))
+                    .width(Length::Fill)
                     .align_items(Alignment::End)
             ]
             .padding([0, padding])

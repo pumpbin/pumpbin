@@ -5,9 +5,18 @@ use std::{fs, ops::Not};
 use anyhow::anyhow;
 use dirs::data_dir;
 use iced::advanced::Application;
-use pumpbin::{plugin::CONFIG_FILE_PATH, Pumpbin};
+use pumpbin::{error_dialog, plugin::CONFIG_FILE_PATH, settings, Pumpbin};
 
-fn main() -> anyhow::Result<()> {
+fn main() {
+    match try_main() {
+        Ok(_) => (),
+        Err(e) => {
+            error_dialog(e);
+        }
+    }
+}
+
+fn try_main() -> anyhow::Result<()> {
     let mut config_path = data_dir().ok_or(anyhow!("Get data_dir failed."))?;
     config_path.push("PumpBin");
     config_path.push("plugins");
@@ -25,6 +34,6 @@ fn main() -> anyhow::Result<()> {
         .set(config_path)
         .map_err(|_| anyhow!("Set CONFIG_FILE_PATH failed."))?;
 
-    Pumpbin::run(Pumpbin::settings())?;
+    Pumpbin::run(settings())?;
     Ok(())
 }
