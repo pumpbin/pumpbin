@@ -18,14 +18,20 @@ jobs:
         with:
             toolchain:
               stable-x86_64-pc-windows-msvc
-      - run: cargo b -r
-      - run: mv target/release/pumpbin.exe PumpBin-x86_64-pc-windows-msvc.exe
-      - run: mv target/release/maker.exe PumpBin-Maker-x86_64-pc-windows-msvc.exe
+            targets: x86_64-pc-windows-msvc, aarch64-pc-windows-msvc
+      - run: cargo build --release --target=x86_64-pc-windows-msvc
+      - run: cargo build --release --target=aarch64-pc-windows-msvc
+      - run: mv target/x86_64-pc-windows-msvc/release/pumpbin.exe PumpBin-x86_64-pc-windows-msvc.exe
+      - run: mv target/x86_64-pc-windows-msvc/release/maker.exe PumpBin-Maker-x86_64-pc-windows-msvc.exe
+      - run: mv target/aarch64-pc-windows-msvc/release/pumpbin.exe PumpBin-aarch64-pc-windows-msvc.exe
+      - run: mv target/aarch64-pc-windows-msvc/release/maker.exe PumpBin-Maker-aarch64-pc-windows-msvc.exe
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             PumpBin-x86_64-pc-windows-msvc.exe
             PumpBin-Maker-x86_64-pc-windows-msvc.exe
+            PumpBin-aarch64-pc-windows-msvc.exe
+            PumpBin-Maker-aarch64-pc-windows-msvc.exe
 
   build-macos:
     name: build-macos
