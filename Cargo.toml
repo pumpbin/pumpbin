@@ -1,6 +1,6 @@
 [package]
 name = "pumpbin"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["b1n <b1n@b1n.io>"]
 edition = "2021"
 description = "PumpBin is an Implant Generation Platform."
@@ -28,6 +28,7 @@ capnp = "0.19"
 extism = "1.4.1"
 serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.120"
+flate2 = "1.0.30"
 
 [dependencies.iced]
 version = "0.13.0-dev"

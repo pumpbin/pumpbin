@@ -9,9 +9,11 @@ use std::{
 use anyhow::{anyhow, bail};
 use bincode::{decode_from_slice, encode_to_vec, Decode, Encode};
 use capnp::{
+    io::Write,
     message::{self, ReaderOptions},
     serialize_packed,
 };
+use flate2::Compression;
 
 use crate::{
     plugin_capnp,
@@ -276,7 +278,12 @@ pub struct Plugin {
 
 impl Plugin {
     pub fn decode_from_slice(data: &[u8]) -> anyhow::Result<Self> {
-        let message = serialize_packed::read_message(data, ReaderOptions::new())?;
+        let mut decoder = flate2::write::ZlibDecoder::new(Vec::new());
+        decoder.write_all(data)?;
+        let decompressed = decoder.finish()?;
+
+        let message =
+            serialize_packed::read_message(decompressed.as_slice(), ReaderOptions::new())?;
         let plugin = message.get_root::<plugin_capnp::plugin::Reader>()?;
 
         let info = plugin.get_info()?;
@@ -412,7 +419,11 @@ impl Plugin {
         let mut buf = Vec::new();
         serialize_packed::write_message(&mut buf, &message)?;
 
-        anyhow::Ok(buf)
+        let mut encoder = flate2::write::ZlibEncoder::new(Vec::new(), Compression::best());
+        encoder.write_all(buf.as_slice())?;
+        let compressed = encoder.finish()?;
+
+        anyhow::Ok(compressed)
     }
 
     pub fn replace_binary(
