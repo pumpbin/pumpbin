@@ -4,15 +4,16 @@ use std::{fs, ops::Not};
 
 use anyhow::anyhow;
 use dirs::data_dir;
-use iced::advanced::Application;
-use pumpbin::{error_dialog, plugin::CONFIG_FILE_PATH, settings, Pumpbin};
+use iced::application;
+use pumpbin::{
+    plugin::CONFIG_FILE_PATH,
+    utils::{self, error_dialog},
+    Pumpbin,
+};
 
 fn main() {
-    match try_main() {
-        Ok(_) => (),
-        Err(e) => {
-            error_dialog(e);
-        }
+    if let Err(e) = try_main() {
+        error_dialog(e);
     }
 }
 
@@ -34,6 +35,10 @@ fn try_main() -> anyhow::Result<()> {
         .set(config_path)
         .map_err(|_| anyhow!("Set CONFIG_FILE_PATH failed."))?;
 
-    Pumpbin::run(settings())?;
+    application("PumpBin", Pumpbin::update, Pumpbin::view)
+        .settings(utils::settings())
+        .window(utils::window_settings())
+        .theme(Pumpbin::theme)
+        .run()?;
     Ok(())
 }

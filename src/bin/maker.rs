@@ -1,47 +1,141 @@
 #![windows_subsystem = "windows"]
 
-use std::{fs, path::PathBuf, usize};
+use std::{fs, ops::Not, path::PathBuf};
 
+use anyhow::{anyhow, bail};
 use dirs::{desktop_dir, home_dir};
 use iced::{
-    advanced::Application,
-    executor,
+    application,
+    futures::TryFutureExt,
     widget::{
         button, column, horizontal_rule, pick_list, radio, row, svg::Handle, text, text_editor,
-        text_input, Svg,
+        text_input, Column, Svg,
     },
-    Alignment, Length, Renderer, Task, Theme,
+    Alignment, Length, Size, Task, Theme,
 };
 use pumpbin::{
-    error_dialog,
-    plugin::{Bins, Plugin},
-    settings, svg_style, ShellcodeSaveType, JETBRAINS_MONO_FONT,
+    plugin::{Plugin, PluginInfo, PluginReplace},
+    utils::{self, error_dialog, message_dialog},
 };
-use pumpbin::{
-    plugin::{EncryptType, Platforms},
-    show_message,
-};
+use pumpbin::{style, ShellcodeSaveType};
 use rfd::{AsyncFileDialog, MessageLevel};
+
+fn main() {
+    if let Err(e) = try_main() {
+        error_dialog(e);
+    }
+}
+
+fn try_main() -> anyhow::Result<()> {
+    let size = Size::new(1200.0, 800.0);
+
+    let mut window_settings = utils::window_settings();
+    window_settings.size = size;
+    window_settings.min_size = Some(size);
+
+    application("PumpBin Maker", Maker::update, Maker::view)
+        .settings(utils::settings())
+        .window(window_settings)
+        .theme(Maker::theme)
+        .run()?;
+
+    Ok(())
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ChooseFileType {
+    WindowsExe,
+    WindowsLib,
+    LinuxExe,
+    LinuxLib,
+    DarwinExe,
+    DarwinLib,
+    EncryptShellcodePlugin,
+    FormatEncryptedShellcodePlugin,
+    FormatUrlRemote,
+    UploadFinalShellcodeRemote,
+}
+
+#[derive(Debug, Clone)]
+enum MakerMessage {
+    PluginNameChanged(String),
+    AuthorChanged(String),
+    VersionChanged(String),
+    SrcPrefixChanged(String),
+    MaxLenChanged(String),
+    ShellcodeSaveTypeChanged(ShellcodeSaveType),
+    SizeHolderChanged(String),
+    WindowsExeChanged(String),
+    WindowsLibChanged(String),
+    LinuxExeChanged(String),
+    LinuxLibChanged(String),
+    DarwinExeChanged(String),
+    DarwinLibChanged(String),
+    EncryptShllcodePluginChanged(String),
+    FormatEncryptedShellcodePluginChanged(String),
+    FormatUrlRemotePluginChanged(String),
+    UploadFinalShellcodeRemotePluginChanged(String),
+    DescAction(text_editor::Action),
+    GenerateClicked,
+    GenerateDone(Result<(), String>),
+    ChooseFileClicked(ChooseFileType),
+    ChooseFileDone((Option<String>, ChooseFileType)),
+    B1nClicked,
+    GithubClicked,
+    ThemeChanged(Theme),
+}
 
 #[derive(Debug)]
 struct Maker {
     plugin_name: String,
     author: String,
     version: String,
-    prefix: String,
+    src_prefix: String,
     max_len: String,
     shellcode_save_type: ShellcodeSaveType,
     size_holder: String,
-    encrypt_type: EncryptType,
     windows_exe: String,
     windows_lib: String,
     linux_exe: String,
     linux_lib: String,
     darwin_exe: String,
     darwin_lib: String,
+    encrypt_shellcode_plugin: String,
+    format_encrypted_shellcode_plugin: String,
+    format_url_remote_plugin: String,
+    upload_final_shellcode_remote_plugin: String,
     desc: text_editor::Content,
     pumpbin_version: String,
     selected_theme: Theme,
+}
+
+impl Maker {
+    fn check_generate(&self) -> anyhow::Result<()> {
+        if self.plugin_name.is_empty() {
+            bail!("Plugin Name is empty.");
+        }
+
+        if self.src_prefix.is_empty() {
+            bail!("Prefix is empty.");
+        }
+
+        let max_len = self.max_len();
+        if max_len.is_empty() {
+            bail!("Max Len is empty.");
+        }
+
+        if max_len.parse::<usize>().is_err() {
+            bail!("Max Len numeric only.");
+        };
+
+        if let ShellcodeSaveType::Local = self.shellcode_save_type() {
+            if self.size_holder().is_empty() {
+                bail!("Size Holder is empty.");
+            }
+        };
+
+        anyhow::Ok(())
+    }
 }
 
 impl Default for Maker {
@@ -50,17 +144,20 @@ impl Default for Maker {
             plugin_name: Default::default(),
             author: Default::default(),
             version: Default::default(),
-            prefix: Default::default(),
+            src_prefix: Default::default(),
             max_len: Default::default(),
-            shellcode_save_type: ShellcodeSaveType::Local,
+            shellcode_save_type: Default::default(),
             size_holder: Default::default(),
-            encrypt_type: EncryptType::None,
             windows_exe: Default::default(),
             windows_lib: Default::default(),
             linux_exe: Default::default(),
             linux_lib: Default::default(),
             darwin_exe: Default::default(),
             darwin_lib: Default::default(),
+            encrypt_shellcode_plugin: Default::default(),
+            format_encrypted_shellcode_plugin: Default::default(),
+            format_url_remote_plugin: Default::default(),
+            upload_final_shellcode_remote_plugin: Default::default(),
             desc: text_editor::Content::new(),
             pumpbin_version: env!("CARGO_PKG_VERSION").into(),
             selected_theme: Theme::CatppuccinMacchiato,
@@ -81,8 +178,8 @@ impl Maker {
         &self.version
     }
 
-    fn prefix(&self) -> &str {
-        &self.prefix
+    fn src_prefix(&self) -> &str {
+        &self.src_prefix
     }
 
     fn max_len(&self) -> &str {
@@ -95,14 +192,6 @@ impl Maker {
 
     fn size_holder(&self) -> &str {
         &self.size_holder
-    }
-
-    fn encrypt_type(&self) -> &EncryptType {
-        &self.encrypt_type
-    }
-
-    fn encrypt_type_mut(&mut self) -> &mut EncryptType {
-        &mut self.encrypt_type
     }
 
     fn windows_exe(&self) -> &str {
@@ -129,6 +218,22 @@ impl Maker {
         &self.darwin_lib
     }
 
+    fn encrypt_shellcode_plugin(&self) -> &str {
+        &self.encrypt_shellcode_plugin
+    }
+
+    fn format_encrypted_shellcode_plugin(&self) -> &str {
+        &self.format_encrypted_shellcode_plugin
+    }
+
+    fn format_url_remote_plugin(&self) -> &str {
+        &self.format_url_remote_plugin
+    }
+
+    fn upload_final_shellcode_remote_plugin(&self) -> &str {
+        &self.upload_final_shellcode_remote_plugin
+    }
+
     fn desc(&self) -> &text_editor::Content {
         &self.desc
     }
@@ -146,399 +251,216 @@ impl Maker {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum ChooseFileType {
-    WindowsExe,
-    WindowsLib,
-    LinuxExe,
-    LinuxLib,
-    DarwinExe,
-    DarwinLib,
-}
-
-#[derive(Debug, Clone)]
-enum MakerMessage {
-    PluginNameChanged(String),
-    AuthorChanged(String),
-    VersionChanged(String),
-    PrefixChanged(String),
-    MaxLenChanged(String),
-    ShellcodeSaveTypeChanged(ShellcodeSaveType),
-    SizeHolderChanged(String),
-    EncryptTypeChanged(EncryptType),
-    XorPassChanged(String),
-    AesKeyChanged(String),
-    AesNonceChanged(String),
-    WindowsExeChanged(String),
-    WindowsLibChanged(String),
-    LinuxExeChanged(String),
-    LinuxLibChanged(String),
-    DarwinExeChanged(String),
-    DarwinLibChanged(String),
-    DescAction(text_editor::Action),
-    GenerateClicked,
-    GenerateDone(Result<(), String>),
-    ChooseFileClicked(ChooseFileType),
-    WindowsExeChooseDone(Result<String, String>),
-    WindowsLibChooseDone(Result<String, String>),
-    LinuxExeChooseDone(Result<String, String>),
-    LinuxLibChooseDone(Result<String, String>),
-    DarwinExeChooseDone(Result<String, String>),
-    DarwinLibChooseDone(Result<String, String>),
-    B1nClicked,
-    GithubClicked,
-    ThemeChanged(Theme),
-}
-
-impl Application for Maker {
-    type Executor = executor::Default;
-    type Flags = ();
-    type Message = MakerMessage;
-    type Theme = Theme;
-    type Renderer = Renderer;
-
-    fn new(_flags: Self::Flags) -> (Self, iced::Task<Self::Message>) {
-        (Self::default(), Task::none())
-    }
-
-    fn title(&self) -> String {
-        "PumpBin Maker".to_string()
-    }
-
-    fn update(&mut self, message: Self::Message) -> iced::Task<Self::Message> {
+impl Maker {
+    pub fn update(&mut self, message: MakerMessage) -> iced::Task<MakerMessage> {
         match message {
-            MakerMessage::PluginNameChanged(x) => {
-                self.plugin_name = x;
-                Task::none()
+            MakerMessage::PluginNameChanged(x) => self.plugin_name = x,
+            MakerMessage::AuthorChanged(x) => self.author = x,
+            MakerMessage::VersionChanged(x) => self.version = x,
+            MakerMessage::SrcPrefixChanged(x) => self.src_prefix = x,
+            MakerMessage::MaxLenChanged(x) => self.max_len = x,
+            MakerMessage::ShellcodeSaveTypeChanged(x) => self.shellcode_save_type = x,
+            MakerMessage::SizeHolderChanged(x) => self.size_holder = x,
+            MakerMessage::WindowsExeChanged(x) => self.windows_exe = x,
+            MakerMessage::WindowsLibChanged(x) => self.windows_lib = x,
+            MakerMessage::LinuxExeChanged(x) => self.linux_exe = x,
+            MakerMessage::LinuxLibChanged(x) => self.linux_lib = x,
+            MakerMessage::DarwinExeChanged(x) => self.darwin_exe = x,
+            MakerMessage::DarwinLibChanged(x) => self.darwin_lib = x,
+            MakerMessage::EncryptShllcodePluginChanged(x) => self.encrypt_shellcode_plugin = x,
+            MakerMessage::FormatEncryptedShellcodePluginChanged(x) => {
+                self.format_encrypted_shellcode_plugin = x
             }
-            MakerMessage::AuthorChanged(x) => {
-                self.author = x;
-                Task::none()
+            MakerMessage::FormatUrlRemotePluginChanged(x) => self.format_url_remote_plugin = x,
+            MakerMessage::UploadFinalShellcodeRemotePluginChanged(x) => {
+                self.upload_final_shellcode_remote_plugin = x
             }
-            MakerMessage::VersionChanged(x) => {
-                self.version = x;
-                Task::none()
-            }
-            MakerMessage::PrefixChanged(x) => {
-                self.prefix = x;
-                Task::none()
-            }
-            MakerMessage::MaxLenChanged(x) => {
-                self.max_len = x;
-                Task::none()
-            }
-            MakerMessage::ShellcodeSaveTypeChanged(x) => {
-                self.shellcode_save_type = x;
-                Task::none()
-            }
-            MakerMessage::SizeHolderChanged(x) => {
-                self.size_holder = x;
-                Task::none()
-            }
-
-            MakerMessage::EncryptTypeChanged(x) => {
-                self.encrypt_type = x;
-                Task::none()
-            }
-            MakerMessage::XorPassChanged(x) => {
-                if let EncryptType::Xor(xor) = self.encrypt_type_mut() {
-                    *xor = x.as_bytes().to_vec();
-                }
-                Task::none()
-            }
-            MakerMessage::AesKeyChanged(x) => {
-                if let EncryptType::AesGcm(aes_gcm) = self.encrypt_type_mut() {
-                    *aes_gcm.key_holder_mut() = x.as_bytes().to_vec();
-                }
-                Task::none()
-            }
-            MakerMessage::AesNonceChanged(x) => {
-                if let EncryptType::AesGcm(aes_gcm) = self.encrypt_type_mut() {
-                    *aes_gcm.nonce_holder_mut() = x.as_bytes().to_vec();
-                }
-                Task::none()
-            }
-            MakerMessage::WindowsExeChanged(x) => {
-                self.windows_exe = x;
-                Task::none()
-            }
-            MakerMessage::WindowsLibChanged(x) => {
-                self.windows_lib = x;
-                Task::none()
-            }
-            MakerMessage::LinuxExeChanged(x) => {
-                self.linux_exe = x;
-                Task::none()
-            }
-            MakerMessage::LinuxLibChanged(x) => {
-                self.linux_lib = x;
-                Task::none()
-            }
-            MakerMessage::DarwinExeChanged(x) => {
-                self.darwin_exe = x;
-                Task::none()
-            }
-            MakerMessage::DarwinLibChanged(x) => {
-                self.darwin_lib = x;
-                Task::none()
-            }
-            MakerMessage::DescAction(x) => {
-                self.desc_mut().perform(x);
-                Task::none()
-            }
+            MakerMessage::DescAction(x) => self.desc_mut().perform(x),
             MakerMessage::GenerateClicked => {
-                if self.plugin_name().is_empty() {
-                    show_message("Plugin Name is empty.".to_string(), MessageLevel::Error);
+                if let Err(e) = self.check_generate() {
+                    message_dialog(e.to_string(), MessageLevel::Error);
                     return Task::none();
                 }
 
-                if self.prefix().is_empty() {
-                    show_message("Prefix is empty.".to_string(), MessageLevel::Error);
-                    return Task::none();
-                }
-
-                if self.max_len().is_empty() {
-                    show_message("MaxLen is empty.".to_string(), MessageLevel::Error);
-                    return Task::none();
-                }
-
-                let max_len;
-                if let Ok(max) = self.max_len().parse::<usize>() {
-                    max_len = max;
-                } else {
-                    show_message("MaxLen numeric only.".to_string(), MessageLevel::Error);
-                    return Task::none();
-                }
-
-                if let ShellcodeSaveType::Local = self.shellcode_save_type() {
-                    if self.size_holder().is_empty() {
-                        show_message("Size Holder is empty.".to_string(), MessageLevel::Error);
-                        return Task::none();
-                    }
-                }
-
-                match self.encrypt_type() {
-                    EncryptType::None => (),
-                    EncryptType::Xor(x) => {
-                        if x.is_empty() {
-                            show_message("Xor Pass is empty.".to_string(), MessageLevel::Error);
-                            return Task::none();
-                        }
-                    }
-                    EncryptType::AesGcm(x) => {
-                        if x.key_holder().is_empty() {
-                            show_message("AesGcm Key is empty.".to_string(), MessageLevel::Error);
-                            return Task::none();
-                        } else if x.nonce_holder().is_empty() {
-                            show_message("AesGcm Nonce is empty.".to_string(), MessageLevel::Error);
-                            return Task::none();
-                        }
-                    }
-                }
-
-                let windows_exe_path = PathBuf::from(self.windows_exe());
-                let windows_dll_path = PathBuf::from(self.windows_lib());
-                let windows = match (
-                    windows_exe_path.exists() && windows_exe_path.is_file(),
-                    windows_dll_path.exists() && windows_dll_path.is_file(),
-                ) {
-                    (false, false) => None,
-                    _ => Some(Bins {
-                        executable: if let Ok(bin) = fs::read(&windows_exe_path) {
-                            Some(bin)
-                        } else {
-                            None
+                let mut plugin = Plugin {
+                    version: self.pumpbin_version().to_string(),
+                    info: PluginInfo {
+                        plugin_name: self.plugin_name().to_string(),
+                        author: {
+                            let author = self.author().to_string();
+                            if author.is_empty() {
+                                "None".to_string()
+                            } else {
+                                author
+                            }
                         },
-                        dynamic_library: if let Ok(bin) = fs::read(&windows_dll_path) {
-                            Some(bin)
-                        } else {
-                            None
+                        version: {
+                            let version = self.version().to_string();
+                            if version.is_empty() {
+                                "None".to_string()
+                            } else {
+                                version
+                            }
                         },
-                    }),
+                        desc: {
+                            let desc = self.desc().text();
+                            if desc.is_empty() {
+                                "None".to_string()
+                            } else {
+                                desc
+                            }
+                        },
+                    },
+                    replace: PluginReplace {
+                        src_prefix: self.src_prefix().as_bytes().to_vec(),
+                        size_holder: match self.shellcode_save_type() {
+                            ShellcodeSaveType::Local => {
+                                Some(self.size_holder().as_bytes().to_vec())
+                            }
+                            ShellcodeSaveType::Remote => None,
+                        },
+                        max_len: self.max_len().parse().unwrap(),
+                    },
+                    ..Default::default()
                 };
 
-                let linux_exe_path = PathBuf::from(self.linux_exe());
-                let linux_dll_path = PathBuf::from(self.linux_lib());
-                let linux = match (
-                    linux_exe_path.exists() && linux_exe_path.is_file(),
-                    linux_dll_path.exists() && linux_dll_path.is_file(),
-                ) {
-                    (false, false) => None,
-                    _ => Some(Bins {
-                        executable: if let Ok(bin) = fs::read(&linux_exe_path) {
-                            Some(bin)
-                        } else {
-                            None
-                        },
-                        dynamic_library: if let Ok(bin) = fs::read(&linux_dll_path) {
-                            Some(bin)
-                        } else {
-                            None
-                        },
-                    }),
-                };
+                let paths: Vec<(String, ChooseFileType)> = vec![
+                    (self.windows_exe(), ChooseFileType::WindowsExe),
+                    (self.windows_lib(), ChooseFileType::WindowsLib),
+                    (self.linux_exe(), ChooseFileType::LinuxExe),
+                    (self.linux_lib(), ChooseFileType::LinuxLib),
+                    (self.darwin_exe(), ChooseFileType::DarwinExe),
+                    (self.darwin_lib(), ChooseFileType::DarwinLib),
+                    (
+                        self.encrypt_shellcode_plugin(),
+                        ChooseFileType::EncryptShellcodePlugin,
+                    ),
+                    (
+                        self.format_encrypted_shellcode_plugin(),
+                        ChooseFileType::FormatEncryptedShellcodePlugin,
+                    ),
+                    (
+                        self.format_url_remote_plugin(),
+                        ChooseFileType::FormatUrlRemote,
+                    ),
+                    (
+                        self.upload_final_shellcode_remote_plugin(),
+                        ChooseFileType::UploadFinalShellcodeRemote,
+                    ),
+                ]
+                .into_iter()
+                .map(|(x, y)| (x.to_string(), y))
+                .collect();
 
-                let darwin_exe_path = PathBuf::from(self.darwin_exe());
-                let darwin_dll_path = PathBuf::from(self.darwin_lib());
-                let darwin = match (
-                    darwin_exe_path.exists() && darwin_exe_path.is_file(),
-                    darwin_dll_path.exists() && darwin_dll_path.is_file(),
-                ) {
-                    (false, false) => None,
-                    _ => Some(Bins {
-                        executable: if let Ok(bin) = fs::read(&darwin_exe_path) {
-                            Some(bin)
-                        } else {
-                            None
-                        },
-                        dynamic_library: if let Ok(bin) = fs::read(&darwin_dll_path) {
-                            Some(bin)
-                        } else {
-                            None
-                        },
-                    }),
-                };
-
-                let plugin = Plugin {
-                    plugin_name: self.plugin_name().to_string(),
-                    author: match self.author().is_empty() {
-                        true => None,
-                        false => Some(self.author().to_string()),
-                    },
-                    version: match self.version().is_empty() {
-                        true => None,
-                        false => Some(self.version().to_string()),
-                    },
-                    desc: match self.desc().text().is_empty() {
-                        true => None,
-                        false => Some(self.desc().text()),
-                    },
-                    prefix: self.prefix().as_bytes().to_vec(),
-                    size_holder: match self.shellcode_save_type() {
-                        ShellcodeSaveType::Local => Some(self.size_holder().as_bytes().to_vec()),
-                        ShellcodeSaveType::Remote => None,
-                    },
-                    max_len,
-                    encrypt_type: self.encrypt_type().to_owned(),
-                    platforms: Platforms {
-                        windows,
-                        linux,
-                        darwin,
-                    },
-                };
-
-                let plugin_name = self.plugin_name().to_owned();
                 let make_plugin = async move {
+                    for (path_str, file_type) in paths {
+                        if path_str.is_empty().not() {
+                            let path = PathBuf::from(path_str);
+                            let data = fs::read(path)?;
+                            let bin = match file_type {
+                                ChooseFileType::WindowsExe => plugin.bins.windows.executable_mut(),
+                                ChooseFileType::WindowsLib => {
+                                    plugin.bins.windows.dynamic_library_mut()
+                                }
+                                ChooseFileType::LinuxExe => plugin.bins.linux.executable_mut(),
+                                ChooseFileType::LinuxLib => plugin.bins.linux.dynamic_library_mut(),
+                                ChooseFileType::DarwinExe => plugin.bins.darwin.executable_mut(),
+                                ChooseFileType::DarwinLib => {
+                                    plugin.bins.darwin.dynamic_library_mut()
+                                }
+                                ChooseFileType::EncryptShellcodePlugin => {
+                                    plugin.plugins.encrypt_shellcode_mut()
+                                }
+                                ChooseFileType::FormatEncryptedShellcodePlugin => {
+                                    plugin.plugins.format_encrypted_shellcode_mut()
+                                }
+                                ChooseFileType::FormatUrlRemote => {
+                                    plugin.plugins.format_url_remote_mut()
+                                }
+                                ChooseFileType::UploadFinalShellcodeRemote => {
+                                    plugin.plugins.upload_final_shellcode_remote_mut()
+                                }
+                            };
+                            *bin = Some(data);
+                        }
+                    }
+
                     let file = AsyncFileDialog::new()
                         .set_directory(desktop_dir().unwrap_or(".".into()))
-                        .set_file_name(format!("{}.b1n", plugin_name))
+                        .set_file_name(format!("{}.b1n", plugin.info().plugin_name()))
                         .set_can_create_directories(true)
-                        .set_title("save plugin")
+                        .set_title("Save generated plugin")
                         .save_file()
                         .await
-                        .ok_or("Canceled plugin saving.".to_string())?;
+                        .ok_or(anyhow!("Canceled the saving of the generated plugin."))?;
 
-                    plugin
-                        .write_plugin(file.path())
-                        .map_err(|_| "Write plugin failed.".to_string())?;
+                    fs::write(file.path(), plugin.encode_to_vec()?)?;
 
-                    Ok(())
-                };
+                    anyhow::Ok(())
+                }
+                .map_err(|e| e.to_string());
 
-                Task::perform(make_plugin, MakerMessage::GenerateDone)
+                return Task::perform(make_plugin, MakerMessage::GenerateDone);
             }
             MakerMessage::GenerateDone(x) => {
                 match x {
-                    Ok(_) => show_message("Generate done.".to_string(), MessageLevel::Info),
-                    Err(e) => show_message(e, MessageLevel::Error),
+                    Ok(_) => message_dialog("Generate done.".to_string(), MessageLevel::Info),
+                    Err(e) => message_dialog(e, MessageLevel::Error),
                 };
-                Task::none()
             }
             MakerMessage::ChooseFileClicked(x) => {
                 let choose_file = async move {
-                    AsyncFileDialog::new()
+                    let file = AsyncFileDialog::new()
                         .set_directory(home_dir().unwrap_or(".".into()))
-                        .set_title("choose file")
+                        .set_title("Choose file")
                         .pick_file()
                         .await
-                        .map(|x| x.path().to_string_lossy().to_string())
-                        .ok_or("Canceled file selection.".to_string())
+                        .map(|x| x.path().to_string_lossy().to_string());
+
+                    (file, x)
                 };
 
-                Task::perform(
-                    choose_file,
-                    match x {
-                        ChooseFileType::WindowsExe => MakerMessage::WindowsExeChooseDone,
-                        ChooseFileType::WindowsLib => MakerMessage::WindowsLibChooseDone,
-                        ChooseFileType::LinuxExe => MakerMessage::LinuxExeChooseDone,
-                        ChooseFileType::LinuxLib => MakerMessage::LinuxLibChooseDone,
-                        ChooseFileType::DarwinExe => MakerMessage::DarwinExeChooseDone,
-                        ChooseFileType::DarwinLib => MakerMessage::DarwinLibChooseDone,
-                    },
-                )
+                return Task::perform(choose_file, MakerMessage::ChooseFileDone);
             }
-            MakerMessage::WindowsExeChooseDone(x) => {
-                if let Ok(path) = x {
-                    self.windows_exe = path;
+            MakerMessage::ChooseFileDone((path, choose_type)) => {
+                if let Some(path) = path {
+                    match choose_type {
+                        ChooseFileType::WindowsExe => self.windows_exe = path,
+                        ChooseFileType::WindowsLib => self.windows_lib = path,
+                        ChooseFileType::LinuxExe => self.linux_exe = path,
+                        ChooseFileType::LinuxLib => self.linux_lib = path,
+                        ChooseFileType::DarwinExe => self.darwin_exe = path,
+                        ChooseFileType::DarwinLib => self.darwin_lib = path,
+                        ChooseFileType::EncryptShellcodePlugin => {
+                            self.encrypt_shellcode_plugin = path
+                        }
+                        ChooseFileType::FormatEncryptedShellcodePlugin => {
+                            self.format_encrypted_shellcode_plugin = path
+                        }
+                        ChooseFileType::FormatUrlRemote => self.format_url_remote_plugin = path,
+                        ChooseFileType::UploadFinalShellcodeRemote => {
+                            self.upload_final_shellcode_remote_plugin = path
+                        }
+                    }
                 }
-
-                Task::none()
-            }
-            MakerMessage::WindowsLibChooseDone(x) => {
-                if let Ok(path) = x {
-                    self.windows_lib = path;
-                }
-
-                Task::none()
-            }
-            MakerMessage::LinuxExeChooseDone(x) => {
-                if let Ok(path) = x {
-                    self.linux_exe = path;
-                }
-
-                Task::none()
-            }
-            MakerMessage::LinuxLibChooseDone(x) => {
-                if let Ok(path) = x {
-                    self.linux_lib = path;
-                }
-
-                Task::none()
-            }
-            MakerMessage::DarwinExeChooseDone(x) => {
-                if let Ok(path) = x {
-                    self.darwin_exe = path;
-                }
-
-                Task::none()
-            }
-            MakerMessage::DarwinLibChooseDone(x) => {
-                if let Ok(path) = x {
-                    self.darwin_lib = path;
-                }
-
-                Task::none()
             }
             MakerMessage::B1nClicked => {
                 if open::that(env!("CARGO_PKG_HOMEPAGE")).is_err() {
-                    show_message("Open home failed.".into(), MessageLevel::Error);
+                    message_dialog("Open home failed.".into(), MessageLevel::Error);
                 }
-                Task::none()
             }
             MakerMessage::GithubClicked => {
                 if open::that(env!("CARGO_PKG_REPOSITORY")).is_err() {
-                    show_message("Open repo failed.".into(), MessageLevel::Error);
+                    message_dialog("Open repo failed.".into(), MessageLevel::Error);
                 }
-                Task::none()
             }
-            MakerMessage::ThemeChanged(x) => {
-                self.selected_theme = x;
-                Task::none()
-            }
+            MakerMessage::ThemeChanged(x) => self.selected_theme = x,
         }
+
+        Task::none()
     }
 
-    fn view(&self) -> iced::Element<'_, Self::Message, Self::Theme, Self::Renderer> {
+    pub fn view(&self) -> Column<MakerMessage> {
         let choose_button = || {
             button(
                 Svg::new(Handle::from_memory(include_bytes!(
@@ -546,23 +468,6 @@ impl Application for Maker {
                 )))
                 .width(20),
             )
-        };
-
-        let pick_list_handle = || pick_list::Handle::Dynamic {
-            closed: pick_list::Icon {
-                font: JETBRAINS_MONO_FONT,
-                code_point: '',
-                size: None,
-                line_height: text::LineHeight::Relative(1.0),
-                shaping: text::Shaping::Basic,
-            },
-            open: pick_list::Icon {
-                font: JETBRAINS_MONO_FONT,
-                code_point: '',
-                size: None,
-                line_height: text::LineHeight::Relative(1.0),
-                shaping: text::Shaping::Basic,
-            },
         };
 
         let maker = column![
@@ -584,11 +489,11 @@ impl Application for Maker {
                 .align_items(Alignment::Start),
                 column![
                     text("Prefix"),
-                    text_input("", self.prefix()).on_input(MakerMessage::PrefixChanged),
+                    text_input("", self.src_prefix()).on_input(MakerMessage::SrcPrefixChanged),
                 ]
                 .align_items(Alignment::Start),
                 column![
-                    text("MaxLen"),
+                    text("Max Len"),
                     text_input("", self.max_len()).on_input(MakerMessage::MaxLenChanged),
                 ]
                 .align_items(Alignment::Start),
@@ -625,42 +530,6 @@ impl Application for Maker {
                 .align_items(Alignment::Center)
                 .height(30)
                 .spacing(20)
-            ]
-            .align_items(Alignment::Start),
-            column![
-                text("Encrypt Type"),
-                row![pick_list(
-                    EncryptType::all(),
-                    Some(self.encrypt_type()),
-                    MakerMessage::EncryptTypeChanged
-                )
-                .handle(pick_list_handle())]
-                .push_maybe(match self.encrypt_type() {
-                    EncryptType::None => None,
-                    EncryptType::Xor(x) => Some(
-                        row![
-                            text("Pass:"),
-                            text_input("", &String::from_utf8_lossy(x))
-                                .on_input(MakerMessage::XorPassChanged)
-                        ]
-                        .spacing(10)
-                        .align_items(Alignment::Center)
-                    ),
-                    EncryptType::AesGcm(x) => Some(
-                        row![
-                            text("Key:"),
-                            text_input("", &String::from_utf8_lossy(x.key_holder()))
-                                .on_input(MakerMessage::AesKeyChanged),
-                            text("Nonce:"),
-                            text_input("", &String::from_utf8_lossy(x.nonce_holder()))
-                                .on_input(MakerMessage::AesNonceChanged)
-                        ]
-                        .spacing(10)
-                        .align_items(Alignment::Center)
-                    ),
-                })
-                .spacing(20)
-                .align_items(Alignment::Center)
             ]
             .align_items(Alignment::Start),
             column![
@@ -713,6 +582,75 @@ impl Application for Maker {
                     .spacing(10)
                 ]
             .align_items(Alignment::Start),
+            row![
+                column![column![
+                    text("Encrypt Shellcode Plug-in"),
+                    row![
+                        text_input("", self.encrypt_shellcode_plugin())
+                            .on_input(MakerMessage::EncryptShllcodePluginChanged),
+                        choose_button().on_press(MakerMessage::ChooseFileClicked(
+                            ChooseFileType::EncryptShellcodePlugin
+                        ))
+                    ]
+                    .align_items(Alignment::Center)
+                    .spacing(10),
+                ]
+                .align_items(Alignment::Start)]
+                .push_maybe(match self.shellcode_save_type() {
+                    ShellcodeSaveType::Local => None,
+                    ShellcodeSaveType::Remote => Some(column![
+                        text("Format Url Remote Plug-in"),
+                        row![
+                            text_input("", self.format_url_remote_plugin())
+                                .on_input(MakerMessage::FormatUrlRemotePluginChanged),
+                            choose_button().on_press(MakerMessage::ChooseFileClicked(
+                                ChooseFileType::FormatUrlRemote
+                            ))
+                        ]
+                        .align_items(Alignment::Center)
+                        .spacing(10)
+                    ]),
+                })
+                .width(Length::FillPortion(1))
+                .align_items(Alignment::Center),
+                column![column![
+                    text("Format Encrypted Shellcode Plug-in"),
+                    row![
+                        text_input("", self.format_encrypted_shellcode_plugin())
+                            .on_input(MakerMessage::FormatEncryptedShellcodePluginChanged),
+                        choose_button().on_press(MakerMessage::ChooseFileClicked(
+                            ChooseFileType::FormatEncryptedShellcodePlugin
+                        ))
+                    ]
+                    .align_items(Alignment::Center)
+                    .spacing(10),
+                ]
+                .align_items(Alignment::Start)]
+                .push_maybe(match self.shellcode_save_type() {
+                    ShellcodeSaveType::Local => None,
+                    ShellcodeSaveType::Remote => Some(
+                        column![
+                            text("Upload Final Shellcode Remote Plug-in"),
+                            row![
+                                text_input("", self.upload_final_shellcode_remote_plugin())
+                                    .on_input(
+                                        MakerMessage::UploadFinalShellcodeRemotePluginChanged
+                                    ),
+                                choose_button().on_press(MakerMessage::ChooseFileClicked(
+                                    ChooseFileType::UploadFinalShellcodeRemote
+                                ))
+                            ]
+                            .align_items(Alignment::Center)
+                            .spacing(10)
+                        ]
+                        .align_items(Alignment::Start)
+                    ),
+                })
+                .width(Length::FillPortion(1))
+                .align_items(Alignment::Center)
+            ]
+            .align_items(Alignment::Center)
+            .spacing(10),
             column![
                 text("Description"),
                 text_editor(self.desc())
@@ -739,7 +677,7 @@ impl Application for Maker {
             )))
             .width(30)
             .height(30)
-            .style(svg_style::svg_primary_base),
+            .style(style::svg::svg_primary_base),
         )
         .style(button::text)
         .on_press(MakerMessage::B1nClicked);
@@ -749,7 +687,7 @@ impl Application for Maker {
             )))
             .width(30)
             .height(30)
-            .style(svg_style::svg_primary_base),
+            .style(style::svg::svg_primary_base),
         )
         .style(button::text)
         .on_press(MakerMessage::GithubClicked);
@@ -778,24 +716,10 @@ impl Application for Maker {
         ]
         .align_items(Alignment::Center);
 
-        column![maker, footer].align_items(Alignment::Center).into()
+        column![maker, footer].align_items(Alignment::Center)
     }
 
-    fn theme(&self) -> Self::Theme {
+    pub fn theme(&self) -> Theme {
         self.selected_theme()
     }
-}
-
-fn main() {
-    match try_main() {
-        Ok(_) => (),
-        Err(e) => {
-            error_dialog(e);
-        }
-    }
-}
-
-fn try_main() -> anyhow::Result<()> {
-    Maker::run(settings())?;
-    Ok(())
 }
