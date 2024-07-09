@@ -23,9 +23,11 @@
 
 **PumpBin** is an Implant Generation Platform.
 
-To use PumpBin, you need to have a b1n file or [Create One](https://pumpbin.b1n.io/devs/start.html).
-A b1n file contains one or more binary implant templates, along with some Extism Plug-in and some additional descriptive information.
-We refer to a b1n file as a Plugin.
+To use PumpBin, you need to have a b1n file or [Create One](https://pumpbin.b1n.io/devs/start.html).\
+A b1n file contains one or more binary implant templates, along with some Extism Plug-in and some additional descriptive information.\
+We usually refer to b1n file as Plugin and wasm file as Extism Plug-in.
+
+The [plug-in](https://github.com/pumpbin/plug-in) repository collects reusable PumpBin Extism Plug-in.
 
 ![](https://github.com/pumpbin/pumpbin/assets/120295547/7f4a662e-3a78-4b16-a7bc-7f55d3369ec2)
 
@@ -34,13 +36,13 @@ We refer to a b1n file as a Plugin.
 - Powerful, simple, and comfortable UI
 - Following the minimal principle to ensure maximum flexibility in usage
 - Support two Plugin types: `Local` and `Remote`
-- Support Plug-in System, you can do whatever you want
-- All generated implants have randomly generated encryption passwords
-- Filling with random data to ensure each generated implant is unique
+- Support Extism Plug-in System, offering powerful extensibility
+- Each generated implant has a different random encryption key
+- Populated with randomized data, each generated implant is unique
 - We have user manual, you no longer need to educate your users
 - No dependencies, just PumpBin
-- Support description, you can write down anything you want to remind users
-- No network connection
+- Support description, you can write anything about this Plugin
+- No network connection(excluding Extism Plug-in)
 - ... And I'm PumpBin, I have magic🪄
 
 ## 🚀 Getting Started
