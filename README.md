@@ -23,7 +23,7 @@
 
 **PumpBin** is an Implant Generation Platform.
 
-To use PumpBin, you need to have a b1n file or [Create One](https://pumpbin.b1n.io/devs/start.html).\
+To use PumpBin, you need to have a b1n file or [Create One](https://pumpbin.b1n.io/dev/start.html).\
 A b1n file contains one or more binary implant templates, along with some Extism Plug-in and some additional descriptive information.\
 We usually refer to b1n file as Plugin and wasm file as Extism Plug-in.
 
