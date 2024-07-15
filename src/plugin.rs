@@ -479,14 +479,14 @@ impl Plugin {
             self.replace().src_prefix(),
             shellcode_src.as_slice(),
             self.replace().max_len(),
-        );
+        )?;
 
         // replace pass
         for pass in pass {
             let holder = pass.holder();
             let replace_by = pass.replace_by();
 
-            utils::replace(bin, holder, replace_by, holder.len());
+            utils::replace(bin, holder, replace_by, holder.len())?;
         }
 
         // replace size_holder
@@ -503,7 +503,7 @@ impl Plugin {
                 .collect();
             size_bytes.extend_from_slice(shellcode_len_bytes.as_slice());
 
-            utils::replace(bin, size_holder, size_bytes.as_slice(), size_holder.len());
+            utils::replace(bin, size_holder, size_bytes.as_slice(), size_holder.len())?;
         }
 
         Ok(())

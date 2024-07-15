@@ -1,5 +1,6 @@
 use std::iter;
 
+use anyhow::anyhow;
 use iced::{
     advanced::graphics::image::image_rs::ImageFormat,
     window::{self, Level, Position},
@@ -62,17 +63,24 @@ pub fn window_settings() -> window::Settings {
     }
 }
 
-pub fn replace(bin: &mut [u8], holder: &[u8], replace_by: &[u8], max_len: usize) {
+pub fn replace(
+    bin: &mut [u8],
+    holder: &[u8],
+    replace_by: &[u8],
+    max_len: usize,
+) -> anyhow::Result<()> {
     let mut replace_by = replace_by.to_owned();
 
-    let find = memmem::find_iter(bin, holder).next();
-    if let Some(position) = find {
-        let mut random: Vec<u8> = iter::repeat(b'0')
-            .take(max_len - replace_by.len())
-            .collect();
-        rand::thread_rng().fill_bytes(&mut random);
-        replace_by.extend_from_slice(random.as_slice());
+    let position = memmem::find_iter(bin, holder)
+        .next()
+        .ok_or(anyhow!("Not found {}", String::from_utf8_lossy(holder)))?;
+    let mut random: Vec<u8> = iter::repeat(b'0')
+        .take(max_len - replace_by.len())
+        .collect();
+    rand::thread_rng().fill_bytes(&mut random);
+    replace_by.extend_from_slice(random.as_slice());
 
-        bin[position..(position + max_len)].copy_from_slice(replace_by.as_slice());
-    }
+    bin[position..(position + max_len)].copy_from_slice(replace_by.as_slice());
+
+    Ok(())
 }
