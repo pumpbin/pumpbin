@@ -11,13 +11,14 @@ use std::{fmt::Display, fs, ops::Not, path::PathBuf};
 use anyhow::anyhow;
 use dirs::{desktop_dir, home_dir};
 use iced::{
+    alignment::{Horizontal, Vertical},
     futures::TryFutureExt,
     widget::{
-        button, column, container, horizontal_rule, pick_list, row, scrollable,
+        button, column, container, horizontal_rule, pick_list, row,
         svg::{self, Handle},
         text, text_editor, text_input, vertical_rule, Column, Scrollable, Svg,
     },
-    Alignment, Background, Length, Task, Theme,
+    Background, Length, Task, Theme,
 };
 use plugin::{Plugin, Plugins};
 use plugin_system::Pass;
@@ -489,7 +490,7 @@ impl Pumpbin {
             .on_press(Message::ChooseShellcodeClicked),
         ]
         .spacing(3)
-        .align_items(Alignment::Center);
+        .align_y(Vertical::Center);
 
         let pick_list_handle = || pick_list::Handle::Dynamic {
             closed: pick_list::Icon {
@@ -535,7 +536,7 @@ impl Pumpbin {
                 text!("Generate")
             ]
             .spacing(3)
-            .align_items(Alignment::Center),
+            .align_y(Vertical::Center),
         )
         .on_press_maybe(
             if self.selected_binary_type().is_some() && self.shellcode_src().is_empty().not() {
@@ -547,10 +548,10 @@ impl Pumpbin {
 
         let setting_panel = row![shellcode_src, platform, binary_type, generate]
             .spacing(spacing)
-            .align_items(Alignment::Center);
+            .align_y(Vertical::Center);
 
         let mut plugin_items = column![]
-            .align_items(Alignment::Center)
+            .align_x(Horizontal::Center)
             .spacing(10)
             .width(Length::Fill)
             .padding(3);
@@ -568,7 +569,7 @@ impl Pumpbin {
                         .color(self.theme().extended_palette().primary.base.color)
                 ]
                 .spacing(spacing)
-                .align_items(Alignment::Center),
+                .align_y(Vertical::Center),
             );
         }
 
@@ -587,7 +588,7 @@ impl Pumpbin {
                     row![
                         column![text!(" {}", plugin.info().author())]
                             .width(Length::Fill)
-                            .align_items(Alignment::Start),
+                            .align_x(Horizontal::Left),
                         column![row!(
                             text(" ").color(self.theme().extended_palette().primary.base.color),
                             if plugin.bins().windows().is_platform_supported() {
@@ -608,13 +609,13 @@ impl Pumpbin {
                                 text(" ").color(self.theme().extended_palette().danger.base.color)
                             }
                         )
-                        .align_items(Alignment::Center)]
+                        .align_y(Vertical::Center)]
                         .width(Length::Shrink)
-                        .align_items(Alignment::End)
+                        .align_x(Horizontal::Right)
                     ]
-                    .align_items(Alignment::Center),
+                    .align_y(Vertical::Center),
                 ]
-                .align_items(Alignment::Center),
+                .align_x(Horizontal::Center),
             )
             .width(Length::Fill)
             .style(match self.selected_plugin() {
@@ -672,14 +673,12 @@ impl Pumpbin {
                             plugin_info_title(" Darwin:"),
                             plugin_info_title(" Description:"),
                         ]
-                        .align_items(Alignment::Start)]
-                        .align_items(Alignment::Start),
-                        row![pumpkin]
-                            .height(Length::Fill)
-                            .align_items(Alignment::End),
+                        .align_x(Horizontal::Left)]
+                        .align_y(Vertical::Top),
+                        row![pumpkin].height(Length::Fill).align_y(Vertical::Bottom),
                     ]
                     .width(Length::FillPortion(1))
-                    .align_items(Alignment::Start),
+                    .align_x(Horizontal::Left),
                     column![
                         text(plugin.info().plugin_name()).size(16),
                         text(plugin.info().author()).size(16),
@@ -711,7 +710,7 @@ impl Pumpbin {
                             }
                         ]
                         .spacing(3)
-                        .align_items(Alignment::Center),
+                        .align_y(Vertical::Center),
                         row![
                             text(BinaryType::Executable.to_string()),
                             {
@@ -733,7 +732,7 @@ impl Pumpbin {
                             }
                         ]
                         .spacing(3)
-                        .align_items(Alignment::Center),
+                        .align_y(Vertical::Center),
                         row![
                             text(BinaryType::Executable.to_string()),
                             {
@@ -755,30 +754,27 @@ impl Pumpbin {
                             }
                         ]
                         .spacing(3)
-                        .align_items(Alignment::Center),
+                        .align_y(Vertical::Center),
                         text_editor(self.plugin_desc())
                             .padding(10)
                             .height(Length::Fill)
                             .on_action(Message::EditorAction),
                     ]
                     .width(Length::FillPortion(3))
-                    .align_items(Alignment::Start)
+                    .align_x(Horizontal::Left)
                 ]
                 .spacing(spacing)
-                .align_items(Alignment::Center)
+                .align_y(Vertical::Center)
             }
             None => row![pumpkin],
         }]
-        .align_items(Alignment::Start);
+        .align_x(Horizontal::Left);
 
         let plugin_list_view = container(
             column![
-                Scrollable::with_direction(
-                    plugin_items,
-                    scrollable::Direction::Vertical(scrollable::Properties::new())
-                )
-                .width(Length::Fill)
-                .height(Length::Fill),
+                Scrollable::new(plugin_items)
+                    .width(Length::Fill)
+                    .height(Length::Fill),
                 column![
                     horizontal_rule(0),
                     row![
@@ -818,16 +814,16 @@ impl Pumpbin {
                         vertical_rule(0),
                     ]
                     .width(Length::Fill)
-                    .align_items(Alignment::Center),
+                    .align_y(Vertical::Center),
                 ]
                 .width(Length::Fill)
                 .height(20)
-                .align_items(Alignment::Center)
+                .align_x(Horizontal::Center)
             ]
             .spacing(3)
             .width(Length::Fill)
             .height(Length::Fill)
-            .align_items(Alignment::Center),
+            .align_x(Horizontal::Center),
         )
         .height(Length::Fill)
         .style(|theme: &Theme| {
@@ -840,7 +836,7 @@ impl Pumpbin {
             plugin_list_view.width(Length::FillPortion(1))
         ]
         .spacing(spacing)
-        .align_items(Alignment::Center)
+        .align_y(Vertical::Center)
         .width(Length::Fill)
         .height(Length::Fill);
 
@@ -879,27 +875,27 @@ impl Pumpbin {
             row![
                 column![version]
                     .width(Length::Fill)
-                    .align_items(Alignment::Start),
-                column![row![b1n, github].align_items(Alignment::Center)]
+                    .align_x(Horizontal::Left),
+                column![row![b1n, github].align_y(Vertical::Center)]
                     .width(Length::Shrink)
-                    .align_items(Alignment::Center),
+                    .align_x(Horizontal::Center),
                 column![theme_list]
                     .width(Length::Fill)
-                    .align_items(Alignment::End)
+                    .align_x(Horizontal::Right)
             ]
             .padding([0, padding])
-            .align_items(Alignment::Center)
+            .align_y(Vertical::Center)
         ]
-        .align_items(Alignment::Center);
+        .align_x(Horizontal::Center);
 
         let home = column![
             column![setting_panel, plugin_panel]
                 .padding(padding)
-                .align_items(Alignment::Center)
+                .align_x(Horizontal::Center)
                 .spacing(spacing),
             footer
         ]
-        .align_items(Alignment::Center);
+        .align_x(Horizontal::Center);
 
         home
     }

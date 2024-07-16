@@ -5,13 +5,14 @@ use std::{fs, ops::Not, path::PathBuf};
 use anyhow::{anyhow, bail};
 use dirs::{desktop_dir, home_dir};
 use iced::{
+    alignment::{Horizontal, Vertical},
     application,
     futures::TryFutureExt,
     widget::{
         button, column, horizontal_rule, pick_list, radio, row, svg::Handle, text, text_editor,
         text_input, Column, Svg,
     },
-    Alignment, Length, Size, Task, Theme,
+    Length, Size, Task, Theme,
 };
 use pumpbin::{
     plugin::{Plugin, PluginInfo, PluginReplace},
@@ -476,30 +477,30 @@ impl Maker {
                     text("Plugin Name"),
                     text_input("", self.plugin_name()).on_input(MakerMessage::PluginNameChanged),
                 ]
-                .align_items(Alignment::Start),
+                .align_x(Horizontal::Left),
                 column![
                     text("Author"),
                     text_input("", self.author()).on_input(MakerMessage::AuthorChanged),
                 ]
-                .align_items(Alignment::Start),
+                .align_x(Horizontal::Left),
                 column![
                     text("Version"),
                     text_input("", self.version()).on_input(MakerMessage::VersionChanged),
                 ]
-                .align_items(Alignment::Start),
+                .align_x(Horizontal::Left),
                 column![
                     text("Prefix"),
                     text_input("", self.src_prefix()).on_input(MakerMessage::SrcPrefixChanged),
                 ]
-                .align_items(Alignment::Start),
+                .align_x(Horizontal::Left),
                 column![
                     text("Max Len"),
                     text_input("", self.max_len()).on_input(MakerMessage::MaxLenChanged),
                 ]
-                .align_items(Alignment::Start),
+                .align_x(Horizontal::Left),
             ]
             .spacing(10)
-            .align_items(Alignment::Center),
+            .align_y(Vertical::Center),
             column![
                 text("Type"),
                 row![
@@ -523,15 +524,15 @@ impl Maker {
                             text_input("", self.size_holder())
                                 .on_input(MakerMessage::SizeHolderChanged)
                         ]
-                        .align_items(Alignment::Center)
+                        .align_y(Vertical::Center)
                     ),
                     ShellcodeSaveType::Remote => None,
                 })
-                .align_items(Alignment::Center)
+                .align_y(Vertical::Center)
                 .height(30)
                 .spacing(20)
             ]
-            .align_items(Alignment::Start),
+            .align_x(Horizontal::Left),
             column![
                 text("Windows"),
                 row![
@@ -545,10 +546,10 @@ impl Maker {
                     choose_button()
                         .on_press(MakerMessage::ChooseFileClicked(ChooseFileType::WindowsLib)),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Vertical::Center)
                 .spacing(10)
             ]
-            .align_items(Alignment::Start),
+            .align_x(Horizontal::Left),
             column![
                 text("Linux"),
                 row![
@@ -561,10 +562,10 @@ impl Maker {
                     choose_button()
                         .on_press(MakerMessage::ChooseFileClicked(ChooseFileType::LinuxLib)),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Vertical::Center)
                 .spacing(10)
             ]
-            .align_items(Alignment::Start),
+            .align_x(Horizontal::Left),
             column![
                     text("Darwin"),
                     row![
@@ -578,10 +579,10 @@ impl Maker {
                         choose_button()
                             .on_press(MakerMessage::ChooseFileClicked(ChooseFileType::DarwinLib)),
                     ]
-                    .align_items(Alignment::Center)
+                    .align_y(Vertical::Center)
                     .spacing(10)
                 ]
-            .align_items(Alignment::Start),
+            .align_x(Horizontal::Left),
             row![
                 column![column![
                     text("Encrypt Shellcode Plug-in"),
@@ -592,10 +593,10 @@ impl Maker {
                             ChooseFileType::EncryptShellcodePlugin
                         ))
                     ]
-                    .align_items(Alignment::Center)
+                    .align_y(Vertical::Center)
                     .spacing(10),
                 ]
-                .align_items(Alignment::Start)]
+                .align_x(Horizontal::Left)]
                 .push_maybe(match self.shellcode_save_type() {
                     ShellcodeSaveType::Local => None,
                     ShellcodeSaveType::Remote => Some(column![
@@ -607,12 +608,12 @@ impl Maker {
                                 ChooseFileType::FormatUrlRemote
                             ))
                         ]
-                        .align_items(Alignment::Center)
+                        .align_y(Vertical::Center)
                         .spacing(10)
                     ]),
                 })
                 .width(Length::FillPortion(1))
-                .align_items(Alignment::Center),
+                .align_x(Horizontal::Center),
                 column![column![
                     text("Format Encrypted Shellcode Plug-in"),
                     row![
@@ -622,10 +623,10 @@ impl Maker {
                             ChooseFileType::FormatEncryptedShellcodePlugin
                         ))
                     ]
-                    .align_items(Alignment::Center)
+                    .align_y(Vertical::Center)
                     .spacing(10),
                 ]
-                .align_items(Alignment::Start)]
+                .align_x(Horizontal::Left)]
                 .push_maybe(match self.shellcode_save_type() {
                     ShellcodeSaveType::Local => None,
                     ShellcodeSaveType::Remote => Some(
@@ -640,16 +641,16 @@ impl Maker {
                                     ChooseFileType::UploadFinalShellcodeRemote
                                 ))
                             ]
-                            .align_items(Alignment::Center)
+                            .align_y(Vertical::Center)
                             .spacing(10)
                         ]
-                        .align_items(Alignment::Start)
+                        .align_x(Horizontal::Left)
                     ),
                 })
                 .width(Length::FillPortion(1))
-                .align_items(Alignment::Center)
+                .align_x(Horizontal::Center)
             ]
-            .align_items(Alignment::Center)
+            .align_y(Vertical::Center)
             .spacing(10),
             column![
                 text("Description"),
@@ -657,14 +658,14 @@ impl Maker {
                     .on_action(MakerMessage::DescAction)
                     .height(Length::Fill)
             ]
-            .align_items(Alignment::Start),
+            .align_x(Horizontal::Left),
             column![row![
                 button("Generate").on_press(MakerMessage::GenerateClicked)
             ]]
-            .align_items(Alignment::Center)
+            .align_x(Horizontal::Center)
             .width(Length::Fill),
         ]
-        .align_items(Alignment::Start)
+        .align_x(Horizontal::Left)
         .padding(20)
         .spacing(10);
 
@@ -703,20 +704,20 @@ impl Maker {
             row![
                 column![version]
                     .width(Length::Fill)
-                    .align_items(Alignment::Start),
-                column![row![b1n, github].align_items(Alignment::Center)]
+                    .align_x(Horizontal::Left),
+                column![row![b1n, github].align_y(Vertical::Center)]
                     .width(Length::Shrink)
-                    .align_items(Alignment::Center),
+                    .align_x(Horizontal::Center),
                 column![theme_list]
                     .width(Length::Fill)
-                    .align_items(Alignment::End)
+                    .align_x(Horizontal::Right)
             ]
             .padding([0, 20])
-            .align_items(Alignment::Center)
+            .align_y(Vertical::Center)
         ]
-        .align_items(Alignment::Center);
+        .align_x(Horizontal::Center);
 
-        column![maker, footer].align_items(Alignment::Center)
+        column![maker, footer].align_x(Horizontal::Center)
     }
 
     pub fn theme(&self) -> Theme {

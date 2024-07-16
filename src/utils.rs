@@ -73,7 +73,7 @@ pub fn replace(
 
     let position = memmem::find_iter(bin, holder)
         .next()
-        .ok_or(anyhow!("Not found {}", String::from_utf8_lossy(holder)))?;
+        .ok_or(anyhow!("Not found {}.", String::from_utf8_lossy(holder)))?;
     let mut random: Vec<u8> = iter::repeat(b'0')
         .take(max_len - replace_by.len())
         .collect();

@@ -40,5 +40,6 @@ fn try_main() -> anyhow::Result<()> {
         .window(utils::window_settings())
         .theme(Pumpbin::theme)
         .run()?;
+
     Ok(())
 }
